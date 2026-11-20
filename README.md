@@ -170,11 +170,11 @@ Jalani karaktermu (WASD / joystick) ke spot yang kamu mau — kamera selalu terk
 Progres tersimpan otomatis di `localStorage` browser — **per device**, tanpa sinkronisasi server. Untuk memindahkan progres ke HP / laptop lain:
 
 1. Di perangkat lama: buka **⚙️ Pengaturan** → **💾 Kode Backup** → **📤 Buat & Salin Kode**.
-2. Kirim kodenya (format `JS3D-...`) ke perangkat lain.
+2. Kirim kodenya (format baru `JS3D2-...`, hanya **~40–60 karakter**) ke perangkat lain.
 3. Di perangkat baru: buka **⚙️ Pengaturan** → tempel kode di kolom yang sama → **📥 Pulihkan dari Kode**.
 4. Game memuat ulang — stage, skor, koleksi ikan, koin, pancingan, dan pengaturanmu sudah pindah. ✅
 
-> Kode backup berisi seluruh data simpananmu. Jangan dibagikan ke orang yang tidak kamu percaya.
+> Kode backup berisi seluruh data simpananmu. Jangan dibagikan ke orang yang tidak kamu percaya. Kode lama berawalan `JS3D-` (format v1) masih tetap bisa diimport.
 
 ### 🗄️ Struktur Save (`localStorage`)
 
