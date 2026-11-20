@@ -171,6 +171,12 @@
   .setting-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 2px; border-bottom: 1px solid #2a2c52; font-size: 15px; font-weight: 600; }
   .setting-row .toggle { padding: 7px 16px; font-size: 13px; background: linear-gradient(90deg, #16a34a, #22c55e); }
   .setting-row .toggle.off { background: #3a3e75; opacity: .8; }
+  .backup-box { margin-top: 14px; border-top: 1px solid #2a2c52; padding-top: 12px; }
+  .backup-box h3 { font-size: 15px; margin: 0 0 6px; }
+  .backup-box p { font-size: 12px; color: #9aa0c3; margin: 0 0 8px; line-height: 1.5; }
+  .backup-box textarea { width: 100%; min-height: 44px; background: #0f1024; color: #e5e7eb; border: 1px solid #2a2c52; border-radius: 8px; padding: 8px; font-size: 11px; font-family: monospace; resize: vertical; box-sizing: border-box; }
+  .backup-btns { display: flex; gap: 8px; margin: 8px 0; }
+  .backup-btns button { flex: 1; padding: 9px 6px; font-size: 13px; }
   .menu-back { margin-top: 4px; background: transparent; border: 2px solid #3a3e75; font-size: 14px; padding: 10px 18px; }
   .menu-back:hover { border-color: #38bdf8; }
   .credits { color: #b9bde0; font-size: 14px; line-height: 1.7; margin-bottom: 16px; }
@@ -431,12 +437,21 @@
       <div class="setting-row"><span>🔊 Efek suara</span><button id="setSfxBtn" class="toggle">Aktif</button></div>
       <div class="setting-row"><span>✨ Kualitas grafis</span><button id="setQualityBtn" class="toggle">Tinggi</button></div>
       <div class="setting-row"><span>🖱️ Mode kamera</span><button id="setCamBtn" class="toggle">Putar</button></div>
+      <div class="backup-box">
+        <h3>💾 Kode Backup</h3>
+        <p>Pindahkan progres (stage, skor, koleksi ikan, koin, pancingan, pengaturan) ke HP / laptop lain. Tekan Buat Kode, salin, lalu tempel di perangkat lain dan tekan Pulihkan.</p>
+        <textarea id="backupCode" placeholder="Kode backup muncul di sini… atau tempel kode dari perangkat lain"></textarea>
+        <div class="backup-btns">
+          <button id="backupExportBtn" class="green">📤 Buat &amp; Salin Kode</button>
+          <button id="backupImportBtn">📥 Pulihkan dari Kode</button>
+        </div>
+      </div>
       <button class="menu-back" data-back>← Kembali</button>
     </div>
     <!-- KREDIT -->
     <div class="menu-view" id="menuCredits" style="display:none">
       <h2>🏆 Kredit</h2>
-      <p class="credits"><b>Jaga Server 3D</b><br>Game tower defense & mancing 3D.<br><br>Dibuat oleh <b>Nvy</b><br>Dibantu Elaina 🤖 ( AI Asisstant )<br><br>Portfolio:<a href="https://nvy.my.id" target="_blank" rel="noopener">nvy.my.id</a><br>Dibangun dengan Three.js.<br>© 2026 Nvy</p>
+      <p class="credits"><b>Jaga Server 3D</b><br>Game tower defense & mancing 3D.<br><br>Dibuat oleh <b>Nvy</b><br>Dibantu Elaina 🤖<br><br>Portfolio:<a href="https://nvy.my.id" target="_blank" rel="noopener">nvy.my.id</a><br>Dibangun dengan Three.js.<br>© 2026 Nvy</p>
       <button class="menu-back" data-back>← Kembali</button>
     </div>
   </div>
@@ -3149,6 +3164,99 @@ function loadProgress() {
 function saveProgress() {
   try { localStorage.setItem('codero3d', JSON.stringify({ unlocked: unlockedStage, best: bestScores, mode: gameMode })); } catch (_) {}
 }
+// ---------- Kode backup (pindah progres antar device) ----------
+// v2 (JS3D2-): format ringkas custom — angka base36, bitmask, dipisah '~' /, / ; / :
+//   tower: unlocked,modeIdx,best(stage=score;...) ~ fish: coins,total,caught(idx:count:best10;...),rodMask,rodIdx,aqua(idx:size10;...),favMask ~ settingsBits
+//   tipikal ~40-60 karakter (v1 JSON base64 bisa 400+). v1 (JS3D-) tetap bisa diimport.
+const SAVE_KEYS = ['codero3d', 'codero3d-settings', 'codero3d-fish'];
+const MODE_IDS = ['santai', 'normal', 'sulit'];
+const b36 = n => Math.max(0, Math.round(n)).toString(36);
+const fromB36 = s => parseInt(s, 36) || 0;
+function exportSaveCode() {
+  try { saveProgress(); } catch (_) {}
+  try { saveFishCollection(); } catch (_) {}
+  try { saveSettings(); } catch (_) {}
+  const best = [];
+  for (const st in bestScores) { if (bestScores[st] > 0) best.push(b36(+st) + '=' + b36(bestScores[st])); }
+  const tower = b36(unlockedStage) + ',' + MODE_IDS.indexOf(gameMode) + ',' + best.join(';');
+  const caught = [];
+  for (const id of Object.keys(fishCollection.caught)) {
+    const i = FISH.findIndex(f => f.id === id);
+    if (i < 0) continue;
+    const g = fishCollection.caught[id];
+    caught.push(b36(i) + ':' + b36(g.count) + ':' + b36(g.best * 10));
+  }
+  let rodMask = 0;
+  for (const r of (fishCollection.rods || [])) { const i = FISH_RODS.findIndex(x => x.id === r); if (i >= 0) rodMask |= (1 << i); }
+  const rodIdx = Math.max(0, FISH_RODS.findIndex(x => x.id === fishCollection.rod));
+  const aqua = (fishCollection.aquarium || []).map(a => {
+    const i = FISH.findIndex(f => f.id === a.id);
+    return i < 0 ? null : b36(i) + ':' + b36(a.size * 10);
+  }).filter(Boolean).join(';');
+  let favMask = 0;
+  for (const id of (fishCollection.fav || [])) { const i = FISH.findIndex(f => f.id === id); if (i >= 0) favMask |= (1 << i); }
+  const fish = b36(fishCollection.coins || 0) + ',' + b36(fishCollection.total || 0) + ',' + caught.join(';') + ',' + b36(rodMask) + ',' + b36(rodIdx) + ',' + aqua + ',' + b36(favMask);
+  const sb = (settings.music ? 1 : 0) | (settings.sfx ? 2 : 0) | (settings.quality === 'high' ? 4 : 0) | (settings.cam === 'pan' ? 8 : 0);
+  return 'JS3D2-' + tower + '~' + fish + '~' + b36(sb);
+}
+function importSaveCode(code, opts) {
+  const reload = !(opts && opts.reload === false);
+  try {
+    const raw = (code || '').trim();
+    if (raw.startsWith('JS3D2-')) {
+      const parts = raw.slice(6).split('~');
+      if (parts.length !== 3) return false;
+      const t = parts[0].split(',');
+      if (t.length !== 3) return false;
+      const unlocked = Math.min(MAX_WAVE, Math.max(1, fromB36(t[0])));
+      const mode = MODE_IDS[fromB36(t[1])] || 'normal';
+      const best = {};
+      if (t[2]) for (const e of t[2].split(';')) {
+        const kv = e.split('=');
+        if (kv.length === 2) { const st = fromB36(kv[0]); if (st >= 1 && st <= MAX_WAVE) best[st] = fromB36(kv[1]); }
+      }
+      localStorage.setItem('codero3d', JSON.stringify({ unlocked, best, mode }));
+      const f = parts[1].split(',');
+      if (f.length !== 7) return false;
+      const caught = {};
+      if (f[2]) for (const e of f[2].split(';')) {
+        const p = e.split(':');
+        if (p.length === 3) { const sp = FISH[fromB36(p[0])]; if (sp) caught[sp.id] = { count: Math.max(1, fromB36(p[1])), best: fromB36(p[2]) / 10 }; }
+      }
+      const rodMask = fromB36(f[3]);
+      const rods = [];
+      FISH_RODS.forEach((r, i) => { if (rodMask & (1 << i)) rods.push(r.id); });
+      if (!rods.length) rods.push('bambu');
+      const rod = (FISH_RODS[fromB36(f[4])] || {}).id || 'bambu';
+      const aquarium = [];
+      if (f[5]) for (const e of f[5].split(';')) {
+        const p = e.split(':');
+        if (p.length === 2) { const sp = FISH[fromB36(p[0])]; if (sp) aquarium.push({ id: sp.id, size: fromB36(p[1]) / 10 }); }
+      }
+      const favMask = fromB36(f[6]);
+      const fav = [];
+      FISH.forEach((sp, i) => { if (favMask & (1 << i)) fav.push(sp.id); });
+      localStorage.setItem('codero3d-fish', JSON.stringify({ caught, total: fromB36(f[1]), coins: fromB36(f[0]), rods, rod, aquarium, fav }));
+      const sb = fromB36(parts[2]);
+      localStorage.setItem('codero3d-settings', JSON.stringify({ music: !!(sb & 1), sfx: !!(sb & 2), quality: (sb & 4) ? 'high' : 'low', cam: (sb & 8) ? 'pan' : 'rotate' }));
+      if (reload) setTimeout(() => location.reload(), 900);
+      return true;
+    }
+    if (raw.startsWith('JS3D-')) {
+      // v1: JSON base64 (kompatibel mundur)
+      const data = JSON.parse(decodeURIComponent(escape(atob(raw.slice(5)))));
+      if (!data || typeof data !== 'object' || data.v !== 1) return false;
+      let wrote = false;
+      for (const k of SAVE_KEYS) {
+        if (data[k] && typeof data[k] === 'object') { localStorage.setItem(k, JSON.stringify(data[k])); wrote = true; }
+      }
+      if (!wrote) return false;
+      if (reload) setTimeout(() => location.reload(), 900);
+      return true;
+    }
+    return false;
+  } catch (_) { return false; }
+}
 function unlockStage(n) { if (n > unlockedStage && n <= MAX_WAVE) { unlockedStage = n; saveProgress(); } }
 function saveBest(stage, sc) { if (!bestScores[stage] || sc > bestScores[stage]) { bestScores[stage] = sc; saveProgress(); } }
 function showOverlayButtons(which) {
@@ -4028,8 +4136,8 @@ $('fishCollectionGrid').addEventListener('click', e => {
   else if (act === 'fav') toggleFishFav(id);
 });
 // gerak char mancing: WASD / panah (PC)
-window.addEventListener('keydown', e => { fishKeys[e.key.toLowerCase()] = true; });
-window.addEventListener('keyup', e => { fishKeys[e.key.toLowerCase()] = false; });
+window.addEventListener('keydown', e => { if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return; fishKeys[e.key.toLowerCase()] = true; });
+window.addEventListener('keyup', e => { if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return; fishKeys[e.key.toLowerCase()] = false; });
 // analog virtual (mobile)
 {
   const base = $('joyBase'), knob = $('joyKnob');
@@ -4068,6 +4176,23 @@ $('setMusicBtn').addEventListener('click', () => { settings.music = !settings.mu
 $('setSfxBtn').addEventListener('click', () => { settings.sfx = !settings.sfx; saveSettings(); applySettings(); refreshSettingsUI(); });
 $('setQualityBtn').addEventListener('click', () => { settings.quality = settings.quality === 'high' ? 'low' : 'high'; saveSettings(); applySettings(); refreshSettingsUI(); });
 $('setCamBtn').addEventListener('click', () => { settings.cam = settings.cam === 'pan' ? 'rotate' : 'pan'; saveSettings(); applySettings(); refreshSettingsUI(); });
+// kode backup: export (buat + salin) & import (pulihkan + reload)
+$('backupExportBtn').addEventListener('click', async () => {
+  const code = exportSaveCode();
+  const ta = $('backupCode');
+  ta.value = code;
+  ta.focus(); ta.select();
+  let ok = false;
+  try { await navigator.clipboard.writeText(code); ok = true; } catch (_) {}
+  if (!ok) { try { ok = document.execCommand('copy'); } catch (_) {} }
+  toast(ok ? '📋 Kode backup tersalin! Simpan baik-baik ya~' : '📋 Kode dibuat — salin manual dari kolom ya~');
+});
+$('backupImportBtn').addEventListener('click', () => {
+  const code = $('backupCode').value;
+  if (!code.trim()) { toast('⚠️ Tempel dulu kode backup-nya di kolom~'); return; }
+  if (importSaveCode(code)) toast('✅ Progres dipulihkan! Memuat ulang…');
+  else toast('❌ Kode tidak valid — cek lagi kodenya ya~');
+});
 $('musicBtn').addEventListener('click', toggleMusic);
 $('camModeBtn').addEventListener('click', () => {
   setCamMode(camMode === 'rotate' ? 'pan' : 'rotate');
@@ -4116,6 +4241,7 @@ $('endlessBtn').addEventListener('click', () => {
   updateHUD();
 });
 document.addEventListener('keydown', e => {
+  if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
   if (e.key === '1') selectBuild('blaster');
   else if (e.key === '2') selectBuild('sniper');
   else if (e.key === '3') selectBuild('frost');
@@ -4233,6 +4359,8 @@ window.__codero3d = {
   getState: () => ({ coins, lives, score, wave, state, towers: towers.length, enemies: enemies.length }),
   getLayout: () => ({ stage: currentStage, path: PATH.map(p => ({ x: p.x, y: p.y })), pads: PADS.map(p => ({ x: p.x, y: p.y })) }),
   getProgress: () => ({ unlocked: unlockedStage, best: { ...bestScores }, mode: gameMode }),
+  saveCode: () => exportSaveCode(),
+  importCode: (code) => importSaveCode(code, { reload: false }),
   getModes: () => Object.keys(MODES),
   getModeState: () => ({ mode: gameMode, lives: MODES[gameMode].lives, coins: MODES[gameMode].coins, hpMul: MODES[gameMode].hpMul }),
   getSettings: () => ({ ...settings }),
