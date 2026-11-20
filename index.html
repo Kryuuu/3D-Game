@@ -23,6 +23,7 @@
   body.fishing .hud, body.fishing .shop, body.fishing #towerPopup { display: none; }
   .fish-hud { position: absolute; top: 10px; left: 10px; right: 10px; z-index: 20; display: none; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; background: rgba(23,24,48,.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid #2a2c52; border-radius: 12px; padding: 10px 12px; }
   body.fishing .fish-hud { display: flex; }
+  #fishAutoBtn.auto-on { background: linear-gradient(135deg, #16a34a, #22c55e); color: #fff; border-color: #4ade80; box-shadow: 0 0 12px rgba(34,197,94,.6); }
   #fishStatus { font-weight: 800; font-size: 15px; }
   #fishStatus.strike { color: #f87171; animation: strikePulse .4s ease-in-out infinite alternate; }
   @keyframes strikePulse { from { transform: scale(1); } to { transform: scale(1.08); } }
@@ -294,6 +295,7 @@
     <div id="fishStatus">🎣 Lempar kailmu ke kolam!</div>
     <div class="btns">
       <span class="fish-coins">🪙 <span id="fishCoins">0</span></span>
+      <button id="fishAutoBtn">🤖 Auto: OFF</button>
       <button id="fishRodBtn">🎣 Pancingan</button>
       <button id="fishCollectionBtn">📖 Koleksi <span id="fishCount">0/12</span></button>
       <button id="fishBackBtn">🏠 Kembali</button>
@@ -2556,6 +2558,7 @@ loadFishCollection();
 // fishState: idle | casting | waiting | bite | minigame | caught
 let fishState = 'idle';
 let fishBiteTimer = 0, fishBiteWindow = 0, fishCastT = 0;
+let fishAuto = false, fishAutoAt = 0; // mode auto mancing + jadwal aksi berikutnya (performance.now, ms)
 let fishCastFrom = new THREE.Vector3(), fishCastTo = new THREE.Vector3();
 let hookedFish = null, fishMini = null;
 function updateFishHUD() {
@@ -2577,6 +2580,16 @@ function updateFishHUD() {
   else if (fishState === 'bite') { st.textContent = '❗ STRIKE! Klik TARIK sekarang!'; st.classList.add('strike'); }
   else if (fishState === 'minigame') st.textContent = '🎯 Pasang jarum di zona hijau!';
   else if (fishState === 'caught') st.textContent = '🎉 Dapat ikan!';
+  if (fishAuto) st.textContent = '🤖 ' + st.textContent;
+}
+function setFishAuto(on) {
+  fishAuto = !!on;
+  const b = $('fishAutoBtn');
+  b.textContent = fishAuto ? '🤖 Auto: ON' : '🤖 Auto: OFF';
+  b.classList.toggle('auto-on', fishAuto);
+  if (fishAuto) { fishAutoAt = performance.now() + 500; toast('🤖 Auto mancing ON — santai aja, ikannya ketangkep sendiri~'); }
+  else toast('🤖 Auto mancing OFF');
+  updateFishHUD();
 }
 function fishCast() {
   if (playMode !== 'fish' || fishState !== 'idle') return;
@@ -2602,6 +2615,7 @@ function fishCast() {
 function fishStartBite() {
   fishState = 'bite';
   fishBiteWindow = 2.5;
+  if (fishAuto) fishAutoAt = performance.now() + 400; // auto tarik 0.4 detik setelah strike
   fishRipples.forEach((rp, i) => { rp.t = -i * 0.25; rp.mesh.visible = true; rp.mesh.position.set(fishBobber.position.x, 0.1, fishBobber.position.z); });
   beep(880, 0.15, 'square', 0.06);
   setTimeout(() => { if (fishState === 'bite') beep(880, 0.15, 'square', 0.06); }, 250);
@@ -2653,6 +2667,7 @@ function fishEscape(msg) {
   fishLine.visible = false;
   toast(msg);
   beep(180, 0.3, 'sawtooth', 0.06);
+  if (fishAuto) fishAutoAt = performance.now() + 1000; // jeda 1 detik sebelum lempar lagi
   updateFishHUD();
 }
 function fishCaught() {
@@ -2687,12 +2702,14 @@ function fishShowResult() {
   $('fishResultModal').classList.add('show');
   fishBobber.visible = false;
   fishLine.visible = false;
+  if (fishAuto) fishAutoAt = performance.now() + 1500; // auto tutup hasil 1.5 detik
   updateFishHUD();
 }
 function fishCloseResult() {
   $('fishResultModal').classList.remove('show');
   fishState = 'idle';
   hookedFish = null;
+  if (fishAuto) fishAutoAt = performance.now() + 1000; // jeda 1 detik sebelum lempar lagi
   updateFishHUD();
 }
 function fishSellResult() {
@@ -3046,6 +3063,9 @@ function exitFishingMode() {
   fishState = 'idle';
   hookedFish = null;
   fishMini = null;
+  fishAuto = false;
+  $('fishAutoBtn').textContent = '🤖 Auto: OFF';
+  $('fishAutoBtn').classList.remove('auto-on');
   clearHeldFish();
   setCamMode(fishPrevCamMode || 'rotate');
   controls.enablePan = true;
@@ -3133,6 +3153,7 @@ function updateFishing(dt, now) {
       fishBobber.visible = false;
       fishLine.visible = false;
       toast('💨 Ikan pergi… terlambat menarik!');
+      if (fishAuto) fishAutoAt = performance.now() + 1000; // jeda 1 detik sebelum lempar lagi
       updateFishHUD();
     }
   } else if (fishState === 'minigame' && fishMini) {
@@ -3162,6 +3183,21 @@ function updateFishing(dt, now) {
       fishJumpAnim = null;
       setHeldFish(hookedFish);
       fishShowResult();
+    }
+  }
+  // mode auto mancing: lempar, tarik, mini-game, tutup hasil — semua otomatis.
+  // jeda antar aksi dijadwalkan di fishStartBite / fishShowResult / fishCloseResult / fishEscape.
+  if (fishAuto && playMode === 'fish') {
+    const blocking = $('fishCollectionModal').classList.contains('show') || $('fishRodModal').classList.contains('show');
+    if (!blocking) {
+      if (fishState === 'idle' && now >= fishAutoAt) fishCast();
+      else if (fishState === 'bite' && now >= fishAutoAt) fishPull();
+      else if (fishState === 'minigame' && fishMini) {
+        const p = fishMini.needle / 100;
+        if (p >= fishMini.zoneStart && p <= fishMini.zoneStart + fishMini.zoneW) fishMiniClick();
+      } else if (fishState === 'caught' && $('fishResultModal').classList.contains('show') && now >= fishAutoAt) {
+        fishCloseResult();
+      }
     }
   }
 }
@@ -4122,6 +4158,7 @@ $('menuCreditsBtn').addEventListener('click', () => showMenuView('Credits'));
 // tombol mode mancing
 $('fishCastBtn').addEventListener('click', fishCast);
 $('fishPullBtn').addEventListener('click', fishPull);
+$('fishAutoBtn').addEventListener('click', () => setFishAuto(!fishAuto));
 $('fishBackBtn').addEventListener('click', exitFishingMode);
 $('fishCamResetBtn').addEventListener('click', () => { camAnim = null; camera.position.copy(FISH_CAM_POS); controls.target.copy(FISH_CAM_TGT); controls.update(); });
 $('fishCollectionBtn').addEventListener('click', () => { renderFishCollection(); $('fishCollectionModal').classList.add('show'); });
@@ -4374,6 +4411,10 @@ window.__jagaserver3d = {
   getProgress: () => ({ unlocked: unlockedStage, best: { ...bestScores }, mode: gameMode }),
   saveCode: () => exportSaveCode(),
   importCode: (code) => importSaveCode(code, { reload: false }),
+  resetSave: () => { // hapus SEMUA progres (tower + mancing + settings, termasuk kunci lama codero3d*) lalu reload
+    ['jagaserver3d', 'jagaserver3d-settings', 'jagaserver3d-fish', 'codero3d', 'codero3d-settings', 'codero3d-fish'].forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
+    location.reload();
+  },
   getModes: () => Object.keys(MODES),
   getModeState: () => ({ mode: gameMode, lives: MODES[gameMode].lives, coins: MODES[gameMode].coins, hpMul: MODES[gameMode].hpMul }),
   getSettings: () => ({ ...settings }),
@@ -4440,6 +4481,8 @@ window.__jagaserver3d = {
     spot: () => { const s = activeSpot(fisherman.x, fisherman.z); return s ? s.name : null; },
     coins: () => fishCollection.coins,
     setCoins: (n) => { fishCollection.coins = n; saveFishCollection(); updateFishHUD(); },
+    auto: (on) => setFishAuto(on),
+    autoOn: () => fishAuto,
     rods: () => ({ owned: [...fishCollection.rods], equipped: fishCollection.rod }),
     buyRod: (id) => { const r = FISH_RODS.find(x => x.id === id); if (r && !fishCollection.rods.includes(id) && fishCollection.coins >= r.price) { fishCollection.coins -= r.price; fishCollection.rods.push(id); fishCollection.rod = id; saveFishCollection(); renderFisherRod(); updateFishHUD(); return true; } return false; },
     rod: () => currentRod().id,
