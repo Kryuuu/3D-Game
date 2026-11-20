@@ -20,7 +20,6 @@
 
 **Jaga Server 3D** adalah game tower defense 3D yang dibuat dengan [Three.js](https://threejs.org/) — seluruh gamenya hidup di **satu file `index.html`**. Bangun pasukan robot penjaga server, hadang gelombang virus yang menyerang, jawab kuis untuk bonus koin, lalu santai sejenak dengan **mode mancing 3D** yang lengkap: RNG ikan, pancingan bertingkat, aquarium pajangan, sampai sistem jual ikan.
 
-> Dulu dikenal sebagai *Codero: Jaga Server* — kini dengan nama dan identitas barunya.
 
 ---
 
