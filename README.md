@@ -5,7 +5,7 @@
 ### Tower defense 3D + mancing 3D dalam **satu file HTML**. Tanpa install, tanpa server, langsung main.
 
 [![Three.js](https://img.shields.io/badge/Three.js-r160-black?logo=threedotjs&logoColor=white)](https://threejs.org/)
-[![HTML5](https://img.shields.io/badge/HTML5-single--file-E34F26?logo=html5&logoColor=white)](https://github.com/Kryuuu/codero-defend)
+[![HTML5](https://img.shields.io/badge/HTML5-single--file-E34F26?logo=html5&logoColor=white)](https://github.com/Kryuuu/3D-Game)
 [![Stages](https://img.shields.io/badge/stage-20-blueviolet)](#-mode--stage)
 [![Ikan](https://img.shields.io/badge/ikan-12_spesies-0ea5e9)](#-ikan)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](#-lisensi)
@@ -154,14 +154,14 @@ Jalani karaktermu (WASD / joystick) ke spot yang kamu mau — kamera selalu terk
 
 1. Download atau clone repo ini:
    ```bash
-   git clone https://github.com/Kryuuu/codero-defend.git
+   git clone https://github.com/Kryuuu/3D-Game.git
    ```
 2. Buka `index.html` di browser (Chrome / Edge / Firefox / Safari).
 3. Main! 🎮
 
 > ⚠️ Game ini memuat **Three.js r160 dari CDN** (jsDelivr), jadi butuh koneksi internet saat bermain. Selain itu gamenya berjalan 100% lokal di browsermu — tanpa server, tanpa akun.
 
-**Tips:** aktifkan GitHub Pages di repo ini (Settings → Pages → Branch `main`) supaya gamenya bisa dimainkan langsung dari `https://kryuuu.github.io/codero-defend/`.
+**Tips:** aktifkan GitHub Pages di repo ini (Settings → Pages → Branch `main`) supaya gamenya bisa dimainkan langsung dari `https://kryuuu.github.io/3D-Game/`.
 
 ---
 
