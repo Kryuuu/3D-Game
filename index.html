@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Codero: Jaga Server 3D</title>
+<title>Jaga Server 3D</title>
 <link rel="icon" href="data:,">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -12,7 +12,82 @@
   .wrap { position: fixed; inset: 0; max-width: none; margin: 0; }
   #stageLabel { color: #38bdf8; font-weight: 700; font-size: 14px; white-space: nowrap; }
   .hud { position: absolute; top: 10px; left: 10px; right: 10px; z-index: 20; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; background: rgba(23,24,48,.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid #2a2c52; border-radius: 12px; padding: 10px 12px; }
+  .gear-wrap { position: relative; }
+  #gearBtn { font-size: 18px; padding: 9px 12px; }
+  .gear-menu { position: absolute; top: calc(100% + 8px); right: 0; min-width: 210px; background: rgba(23,24,48,.97); border: 1px solid #2a2c52; border-radius: 12px; padding: 6px; display: none; flex-direction: column; gap: 4px; box-shadow: 0 12px 32px rgba(0,0,0,.5); z-index: 30; }
+  .gear-menu.show { display: flex; }
+  .gear-menu button { justify-content: flex-start; text-align: left; background: transparent; border-radius: 8px; padding: 10px 12px; font-size: 14px; width: 100%; }
+  .gear-menu button:hover { background: rgba(255,255,255,.08); }
+  .gear-menu button.active-mode { background: rgba(56,189,248,.2); }
   body.menu-open .hud, body.menu-open .shop, body.menu-open #towerPopup, body.menu-open #toast { display: none; }
+  body.fishing .hud, body.fishing .shop, body.fishing #towerPopup { display: none; }
+  .fish-hud { position: absolute; top: 10px; left: 10px; right: 10px; z-index: 20; display: none; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; background: rgba(23,24,48,.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid #2a2c52; border-radius: 12px; padding: 10px 12px; }
+  body.fishing .fish-hud { display: flex; }
+  #fishStatus { font-weight: 800; font-size: 15px; }
+  #fishStatus.strike { color: #f87171; animation: strikePulse .4s ease-in-out infinite alternate; }
+  @keyframes strikePulse { from { transform: scale(1); } to { transform: scale(1.08); } }
+  .fish-coins { font-weight: 800; font-size: 15px; color: #facc15; background: rgba(0,0,0,.3); border-radius: 999px; padding: 6px 12px; }
+  .fish-actions { position: absolute; bottom: 22px; right: 22px; z-index: 20; display: none; gap: 12px; }
+  body.fishing .fish-actions { display: flex; }
+  .fish-fab { width: 96px; height: 96px; border-radius: 50%; border: 3px solid rgba(255,255,255,.35); background: linear-gradient(160deg, #22c55e, #15803d); color: #fff; font-size: 34px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; cursor: pointer; box-shadow: 0 10px 30px rgba(34,197,94,.45), inset 0 -6px 12px rgba(0,0,0,.25); padding: 0; }
+  .fish-fab span { font-size: 12px; font-weight: 800; letter-spacing: .5px; }
+  .fish-fab:active { transform: scale(.92); }
+  .fish-fab.pull { background: linear-gradient(160deg, #ef4444, #b91c1c); box-shadow: 0 10px 30px rgba(239,68,68,.5), inset 0 -6px 12px rgba(0,0,0,.25); animation: fabPulse .45s ease-in-out infinite alternate; }
+  @keyframes fabPulse { from { transform: scale(1); } to { transform: scale(1.1); } }
+  .fish-joystick { position: absolute; bottom: 26px; left: 22px; z-index: 20; display: none; }
+  @media (pointer: coarse) { body.fishing .fish-joystick { display: block; } }
+  .joy-base { width: 112px; height: 112px; border-radius: 50%; background: rgba(255,255,255,.08); border: 2px solid rgba(255,255,255,.25); backdrop-filter: blur(4px); position: relative; touch-action: none; }
+  .joy-knob { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(160deg, #38bdf8, #2563eb); box-shadow: 0 4px 14px rgba(56,189,248,.5); position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+  #fishGameModal, #fishResultModal, #fishCollectionModal, #fishRodModal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(8, 9, 22, .8); z-index: 60; padding: 16px; }
+  #fishResultModal { background: rgba(8, 9, 22, .45); }
+  #fishGameModal.show, #fishResultModal.show, #fishCollectionModal.show, #fishRodModal.show { display: flex; }
+  .fish-game-box, .fish-result-box, .fish-collection-box, .fish-rod-box { background: #171830; border: 2px solid #38bdf8; border-radius: 16px; padding: 22px; max-width: 480px; width: 100%; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,.5); animation: quizIn .3s ease-out; }
+  .fish-collection-box { max-height: 85vh; overflow-y: auto; }
+  .fish-rod-box { max-width: 520px; max-height: 85vh; overflow-y: auto; }
+  .fish-rod-coins { font-weight: 800; color: #facc15; margin: 4px 0 12px; }
+  .rod-card { display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,.05); border: 1px solid #2a2c52; border-radius: 12px; padding: 12px; margin-bottom: 10px; text-align: left; }
+  .rod-card.equipped { border-color: #facc15; background: rgba(250,204,21,.08); }
+  .rod-emoji { font-size: 32px; }
+  .rod-info { flex: 1; }
+  .rod-name { font-weight: 800; font-size: 15px; }
+  .rod-stats { font-size: 12px; color: #9aa0c3; margin-top: 2px; }
+  .rod-card button { white-space: nowrap; }
+  .rod-card button:disabled { opacity: .5; cursor: default; }
+  .fish-collection-box { max-width: 560px; max-height: 85vh; overflow-y: auto; }
+  #fishGameSub { color: #9aa0c3; margin: 4px 0 2px; }
+  #fishGameRound { font-weight: 800; color: #facc15; margin: 4px 0 14px; }
+  .fish-bar { position: relative; height: 42px; background: #0b0c1a; border: 2px solid #3a3e75; border-radius: 999px; overflow: hidden; cursor: pointer; }
+  .fish-zone { position: absolute; top: 0; bottom: 0; background: linear-gradient(90deg, #16a34a, #4ade80); border-left: 2px solid #bbf7d0; border-right: 2px solid #bbf7d0; }
+  .fish-needle { position: absolute; top: -2px; bottom: -2px; width: 5px; background: #fff; box-shadow: 0 0 10px #fff; border-radius: 3px; }
+  .fish-hint { color: #9aa0c3; font-size: 13px; margin-top: 12px; }
+  #fishResultEmoji { font-size: 64px; line-height: 1.1; }
+  #fishResultName { margin: 6px 0 2px; }
+  #fishResultRarity { font-weight: 800; margin: 2px 0; }
+  #fishResultStats { color: #b9bde0; margin: 6px 0; }
+  #fishResultNew { color: #facc15; font-weight: 800; margin: 4px 0 12px; min-height: 20px; }
+  #fishCollectionGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 14px 0; }
+  .f-actions { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; margin-top: 6px; }
+  .f-actions button { padding: 4px 8px; font-size: 11px; border-radius: 999px; }
+  .f-show { background: linear-gradient(90deg, #f59e0b, #f97316); }
+  .f-sell { background: linear-gradient(90deg, #22c55e, #15803d); }
+  .f-aqua { background: linear-gradient(90deg, #06b6d4, #2563eb); }
+  .f-fav { background: linear-gradient(90deg, #64748b, #475569); }
+  .f-fav.faved { background: linear-gradient(90deg, #facc15, #eab308); color: #422006; }
+  .fish-card.fav { border-color: #facc15; background: rgba(250,204,21,.08); }
+  .sell-all-btn { width: 100%; margin: 4px 0 10px; background: linear-gradient(90deg, #22c55e, #15803d); font-weight: 800; }
+  .sell-all-btn:disabled { opacity: .45; cursor: default; }
+  .sell-all-btn.armed { background: linear-gradient(90deg, #ef4444, #b91c1c); }
+  #fishAquariumList { text-align: left; margin: 8px 0 14px; }
+  .aqua-row { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.05); border: 1px solid #2a2c52; border-radius: 10px; padding: 8px 12px; margin-bottom: 6px; font-size: 13px; }
+  .aqua-row .a-info { flex: 1; }
+  .aqua-row button { padding: 5px 10px; font-size: 12px; }
+  .aqua-empty { color: #9aa0c3; font-size: 13px; padding: 8px 0; }
+  .fish-card { background: #0f1024; border: 2px solid #2a2c52; border-radius: 12px; padding: 10px 6px; }
+  .fish-card .f-emoji { font-size: 32px; }
+  .fish-card .f-name { font-weight: 800; font-size: 13px; margin-top: 4px; }
+  .fish-card .f-meta { color: #9aa0c3; font-size: 11px; line-height: 1.4; margin-top: 2px; }
+  .fish-card.locked { opacity: .45; }
+  .fish-card.locked .f-emoji { filter: grayscale(1) brightness(.4); }
   .stats { display: flex; gap: 14px; flex-wrap: wrap; font-weight: 700; font-size: 15px; }
   .stats b { color: #facc15; } .stats .lives b { color: #fb7185; } .stats .wave b { color: #38bdf8; }
   .btns { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -99,19 +174,24 @@
   .menu-back { margin-top: 4px; background: transparent; border: 2px solid #3a3e75; font-size: 14px; padding: 10px 18px; }
   .menu-back:hover { border-color: #38bdf8; }
   .credits { color: #b9bde0; font-size: 14px; line-height: 1.7; margin-bottom: 16px; }
+  .credits a { color: #38bdf8; font-weight: 700; text-decoration: none; }
+  .credits a:hover { text-decoration: underline; }
   .menu-tips { display: flex; gap: 8px; justify-content: flex-start; flex-wrap: wrap; }
   .menu-tips .tip { background: rgba(35,36,74,.85); border: 1px solid #2a2c52; border-radius: 10px; padding: 8px 12px; font-size: 12px; color: #b9bde0; line-height: 1.4; max-width: 170px; }
   .shop { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); width: min(960px, calc(100% - 20px)); z-index: 20; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
   .card { background: rgba(23,24,48,.88); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 2px solid #2a2c52; border-radius: 12px; padding: 10px; text-align: center; cursor: pointer; transition: border-color .15s, transform .08s; user-select: none; touch-action: none; }
   .card:hover { border-color: #4a4e8f; } .card:active { transform: scale(.97); }
   .card.selected { border-color: #facc15; box-shadow: 0 0 0 2px rgba(250,204,21,.35); }
+  @keyframes cardIn {
+    0% { opacity: 0; transform: translateY(26px) scale(.9); }
+    60% { opacity: 1; transform: translateY(-4px) scale(1.03); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .card.enter { animation: cardIn .5s cubic-bezier(.2,.8,.3,1.2) backwards; }
   .card img { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; background: #0b0c1a; border: 2px solid #3a3e75; }
   .card h3 { font-size: 15px; margin: 6px 0 2px; }
   .card .cost { color: #facc15; font-weight: 800; font-size: 14px; }
   .card .desc { color: #9aa0c3; font-size: 12px; line-height: 1.4; margin-top: 3px; }
-  #dragGhost { position: fixed; z-index: 100; pointer-events: none; display: none; width: 64px; height: 64px; border-radius: 50%; border: 3px solid #38bdf8; background: #23244a; box-shadow: 0 8px 24px rgba(0,0,0,.5); transform: translate(-50%, -50%); }
-  #dragGhost.show { display: block; }
-  #dragGhost img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
   #upgradeBtn { background: linear-gradient(90deg, #7c3aed, #2563eb); }
   #sellBtn { background: #3f2a2a; color: #fca5a5; }
   #quizModal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(8, 9, 22, .8); z-index: 60; padding: 16px; }
@@ -190,14 +270,36 @@
     <div class="btns">
       <button id="startBtn">▶ Mulai Wave</button>
       <button id="speedBtn">⏩ 1x</button>
-      <button id="pauseBtn">⏸ Jeda</button>
-      <button id="retryStageBtn">🔄 Ulang</button>
-      <button id="menuBtn">☰ Menu</button>
-      <button id="muteBtn">🔊</button>
-      <button id="musicBtn" title="Musik">🎵</button>
-      <button id="camModeBtn" title="Mode drag kamera: putar / geser layar">🔄 Putar</button>
-      <button id="camResetBtn" title="Kembali ke tampilan awal">🎯</button>
+      <div class="gear-wrap">
+        <button id="gearBtn" title="Menu">⚙️</button>
+        <div class="gear-menu" id="gearMenu">
+          <button id="pauseBtn">⏸ Jeda</button>
+          <button id="retryStageBtn">🔄 Ulang Stage</button>
+          <button id="camModeBtn" title="Mode drag kamera: putar / geser layar">🔄 Putar</button>
+          <button id="camResetBtn" title="Kembali ke tampilan awal">🎯 Reset Kamera</button>
+          <button id="muteBtn">🔊 Suara</button>
+          <button id="musicBtn" title="Musik">🎵 Musik</button>
+          <button id="menuBtn">☰ Menu Utama</button>
+        </div>
+      </div>
     </div>
+  </div>
+  <div class="fish-hud" id="fishHud">
+    <div id="fishStatus">🎣 Lempar kailmu ke kolam!</div>
+    <div class="btns">
+      <span class="fish-coins">🪙 <span id="fishCoins">0</span></span>
+      <button id="fishRodBtn">🎣 Pancingan</button>
+      <button id="fishCollectionBtn">📖 Koleksi <span id="fishCount">0/12</span></button>
+      <button id="fishBackBtn">🏠 Kembali</button>
+      <button id="fishCamResetBtn" title="Kembali ke tampilan awal">🎯</button>
+    </div>
+  </div>
+  <div class="fish-actions" id="fishActions">
+    <button id="fishCastBtn" class="fish-fab">🎣<span>Lempar</span></button>
+    <button id="fishPullBtn" class="fish-fab pull" style="display:none">❗<span>TARIK!</span></button>
+  </div>
+  <div class="fish-joystick" id="fishJoystick">
+    <div class="joy-base" id="joyBase"><div class="joy-knob" id="joyKnob"></div></div>
   </div>
 
   <div class="canvas-box">
@@ -240,12 +342,52 @@
     </div>
   </div>
 </div>
+<div id="fishGameModal">
+  <div class="fish-game-box">
+    <h2 id="fishGameTitle">🎣 Ikan menyangkut!</h2>
+    <p id="fishGameSub"></p>
+    <p id="fishGameRound"></p>
+    <div class="fish-bar" id="fishBar">
+      <div class="fish-zone" id="fishZone"></div>
+      <div class="fish-needle" id="fishNeedle"></div>
+    </div>
+    <p class="fish-hint">Klik di mana saja saat jarum di zona hijau!</p>
+  </div>
+</div>
+<div id="fishResultModal">
+  <div class="fish-result-box">
+    <div id="fishResultEmoji"></div>
+    <h2 id="fishResultName"></h2>
+    <p id="fishResultRarity"></p>
+    <p id="fishResultStats"></p>
+    <p id="fishResultNew"></p>
+    <div class="confirm-btns"><button id="fishResultOk" class="green">🎣 Lanjut Mancing</button><button id="fishResultSell">💰 Jual</button><button id="fishResultCollection">📖 Koleksi</button></div>
+  </div>
+</div>
+<div id="fishCollectionModal">
+  <div class="fish-collection-box">
+    <h2>📖 Koleksi Ikan <span id="fishCollectionCount"></span></h2>
+    <div id="fishCollectionGrid"></div>
+    <button id="fishSellAllBtn" class="sell-all-btn">💰 Jual Semua</button>
+    <h3>🐠 Aquarium <span id="fishAquariumCount"></span></h3>
+    <div id="fishAquariumList"></div>
+    <button id="fishCollectionClose">Tutup</button>
+  </div>
+</div>
+  <div id="fishRodModal">
+    <div class="fish-rod-box">
+      <h2>🎣 Toko Pancingan</h2>
+      <p class="fish-rod-coins">🪙 Koinmu: <span id="fishRodCoins">0</span></p>
+      <div id="fishRodList"></div>
+      <button id="fishRodClose">Tutup</button>
+    </div>
+  </div>
 <div id="menuOverlay">
   <div class="menu-panel">
     <!-- MENU UTAMA -->
     <div class="menu-view" id="menuMain">
       <div class="menu-portraits" id="menuPortraits"></div>
-      <h1>🤖 CODERO<br>JAGA SERVER 3D</h1>
+      <h1>🤖 JAGA SERVER 3D</h1>
       <p class="menu-tag">Bangun menara robot, tahan virus, lindungi server!</p>
       <div class="menu-stats" id="menuStats"></div>
       <div class="menu-list">
@@ -253,6 +395,7 @@
         <button id="menuNewBtn" class="menu-item">🆕 Game Baru</button>
         <button id="menuLoadBtn" class="menu-item">📂 Muat Game</button>
         <button id="menuModeBtn" class="menu-item">🎮 Mode: <span id="menuModeLabel">Normal</span></button>
+        <button id="menuFishBtn" class="menu-item">🎣 Mancing</button>
         <button id="menuSettingsBtn" class="menu-item">⚙️ Pengaturan</button>
         <button id="menuCreditsBtn" class="menu-item">🏆 Kredit</button>
       </div>
@@ -265,7 +408,7 @@
         <span class="tip">🧡 Mulai stage 4, virus Penyerang menyerang menaramu — pasang Healer!</span>
         <span class="tip">🎓 Kuis tiap stage: benar +koin, salah −10% · 🪐 Klik planet & black hole dapat +5 koin!</span>
       </div>
-      <p class="menu-foot">Codero: Jaga Server 3D · v1.0</p>
+      <p class="menu-foot">Jaga Server 3D · v1.0</p>
     </div>
     <!-- MUAT GAME -->
     <div class="menu-view" id="menuStages" style="display:none">
@@ -293,7 +436,7 @@
     <!-- KREDIT -->
     <div class="menu-view" id="menuCredits" style="display:none">
       <h2>🏆 Kredit</h2>
-      <p class="credits"><b>Codero: Jaga Server 3D</b><br>Game tower defense 3D.<br><br>Dibuat oleh <b>Nvy</b><br>Dibantu Elaina 🤖 ( Ai Assistant ) <br><br>Dibangun dengan Three.js.<br>© 2026 Nvy</p>
+      <p class="credits"><b>Jaga Server 3D</b><br>Game tower defense & mancing 3D.<br><br>Dibuat oleh <b>Nvy</b><br>Dibantu Elaina 🤖 ( AI Asisstant )<br><br>Portfolio:<a href="https://nvy.my.id" target="_blank" rel="noopener">nvy.my.id</a><br>Dibangun dengan Three.js.<br>© 2026 Nvy</p>
       <button class="menu-back" data-back>← Kembali</button>
     </div>
   </div>
@@ -398,20 +541,20 @@ function generatePads(path) {
   return cands.slice(0, 12).map(c => ({ x: c.x, y: c.y }));
 }
 const TOWERS = {
-  blaster: { name:'Codero Blaster', cost:50,  dmg:12, range:115, rate:2.0, color:'#facc15', proj:'#fde047',
+  blaster: { name:'Blaster', cost:50,  dmg:12, range:115, rate:2.0, color:'#facc15', proj:'#fde047',
              desc:'Serangan cepat, damage sedang. Andalan di awal.' },
-  sniper:  { name:'Codero Sniper',  cost:100, dmg:40, range:210, rate:0.7, color:'#38bdf8', proj:'#7dd3fc',
+  sniper:  { name:'Sniper',  cost:100, dmg:40, range:210, rate:0.7, color:'#38bdf8', proj:'#7dd3fc',
              desc:'Jarak sangat jauh, damage besar, tembakan lambat.' },
-  frost:   { name:'Codero Frost',   cost:75,  dmg:4,  range:105, rate:1.5, color:'#67e8f9', proj:'#a5f3fc',
+  frost:   { name:'Frost',   cost:75,  dmg:4,  range:105, rate:1.5, color:'#67e8f9', proj:'#a5f3fc',
              desc:'Damage kecil tapi memperlambat virus 45%.' },
-  healer:  { name:'Codero Healer',  cost:80,  dmg:18, range:200, rate:0.5, color:'#22c55e', proj:'#4ade80',
+  healer:  { name:'Healer',  cost:80,  dmg:18, range:200, rate:0.5, color:'#22c55e', proj:'#4ade80',
              desc:'Memulihkan HP menara di sekitarnya tiap 2 detik.' }
 };
 const ENEMIES = {
-  normal: { hp:30,  speed:55, r:16, color:'#f43f5e', dark:'#9f1239', reward:8,  lives:1, spikes:9 },
-  fast:   { hp:18,  speed:96, r:12, color:'#fb923c', dark:'#9a3412', reward:10, lives:1, spikes:7 },
-  tank:   { hp:130, speed:32, r:23, color:'#a855f7', dark:'#6b21a8', reward:25, lives:2, spikes:12 },
-  attacker: { hp:70, speed:48, r:17, color:'#f97316', dark:'#7c2d12', reward:15, lives:1, spikes:10 }
+  normal: { hp:30,  speed:48, r:16, color:'#f43f5e', dark:'#9f1239', reward:8,  lives:1, spikes:9 },
+  fast:   { hp:18,  speed:84, r:12, color:'#fb923c', dark:'#9a3412', reward:10, lives:1, spikes:7 },
+  tank:   { hp:130, speed:28, r:23, color:'#a855f7', dark:'#6b21a8', reward:25, lives:2, spikes:12 },
+  attacker: { hp:70, speed:42, r:17, color:'#f97316', dark:'#7c2d12', reward:15, lives:1, spikes:10 }
 };
 const WAVES = [
   [{t:'normal',n:6}],
@@ -481,6 +624,9 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.target.set(0, 0, 0);
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
+controls.rotateSpeed = 0.6;
+controls.panSpeed = 0.7;
+controls.zoomSpeed = 0.8;
 controls.minDistance = 14;
 controls.maxDistance = 65;
 controls.maxPolarAngle = 1.15;
@@ -517,7 +663,7 @@ function gameCamPos() { return isPortraitView() ? new THREE.Vector3(40, 42, 0) :
 function gameCamTgt() { return isPortraitView() ? new THREE.Vector3(7, 0, 0) : new THREE.Vector3(0, 0, 4); }
 let camAnim = null;
 let savedCamPos = null, savedCamTgt = null;
-function flyCameraTo(pos, tgt) { camAnim = { pos: pos.clone(), tgt: tgt.clone() }; }
+function flyCameraTo(pos, tgt) { camAnim = { pos: pos.clone(), tgt: tgt.clone(), t0: performance.now() }; }
 
 // lights
 scene.add(new THREE.HemisphereLight(0x8a9bff, 0x1a1c33, 0.75));
@@ -591,6 +737,7 @@ function buildPath() {
   const g = new THREE.Group();
   const mat = new THREE.MeshStandardMaterial({ color: 0x2e3260, roughness: 0.85 });
   const matTop = new THREE.MeshStandardMaterial({ color: LAYOUTS[currentStage - 1].pathTop || 0x3d4278, roughness: 0.8 });
+  const edgeMat = new THREE.MeshStandardMaterial({ color: 0x0e7490, emissive: 0x22d3ee, emissiveIntensity: 1.4, roughness: 0.4 });
   for (let i = 0; i < PATH.length - 1; i++) {
     const a = PATH[i], b = PATH[i + 1];
     const ax = X(a.x), az = Z(a.y), bx = X(b.x), bz = Z(b.y);
@@ -606,6 +753,15 @@ function buildPath() {
     top.position.set((ax + bx) / 2, 0.11, (az + bz) / 2);
     top.rotation.y = ang;
     g.add(top);
+    // strip cahaya di kedua tepi jalur
+    for (const side of [-1.15, 1.15]) {
+      const edge = new THREE.Mesh(new THREE.BoxGeometry(len, 0.05, 0.12), edgeMat);
+      const px = (ax + bx) / 2 + Math.sin(ang) * side;
+      const pz = (az + bz) / 2 + Math.cos(ang) * side;
+      edge.position.set(px, 0.13, pz);
+      edge.rotation.y = ang;
+      g.add(edge);
+    }
   }
   for (let i = 1; i < PATH.length - 1; i++) {
     const c = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 0.1, 24), mat);
@@ -613,8 +769,32 @@ function buildPath() {
     c.receiveShadow = true;
     g.add(c);
   }
+  // portal spawn di titik awal jalur (virus keluar dari sini)
+  portalDisc = null;
+  {
+    const a = PATH[0], b = PATH[1];
+    const ang = -Math.atan2(Z(b.y) - Z(a.y), X(b.x) - X(a.x));
+    const portal = new THREE.Group();
+    portal.position.set(X(a.x), 2.3, Z(a.y));
+    portal.rotation.y = ang + Math.PI / 2;
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(2.2, 0.18, 12, 48),
+      new THREE.MeshStandardMaterial({ color: 0x3b0764, emissive: 0xa855f7, emissiveIntensity: 1.8, roughness: 0.3 })
+    );
+    portal.add(ring);
+    portalDisc = new THREE.Mesh(
+      new THREE.CircleGeometry(2.0, 32),
+      new THREE.MeshBasicMaterial({ map: makeRingGlowTexture(), color: 0xc084fc, transparent: true, opacity: 0.75, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide })
+    );
+    portal.add(portalDisc);
+    const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: makeGlowTexture(), color: 0xa855f7, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false }));
+    glow.scale.setScalar(8);
+    portal.add(glow);
+    g.add(portal);
+  }
   return g;
 }
+let portalDisc = null;
 let pathGroup = null;
 function rebuildPath() {
   if (pathGroup) {
@@ -642,6 +822,21 @@ const crystals = [];
     scene.add(m);
     crystals.push(m);
   });
+}
+
+// nebula lembut di langit jauh (ungu, biru, pink)
+{
+  const nebulae = [
+    { x: -45, y: 32, z: -75, c: 0x7c3aed, s: 70, o: 0.13 },
+    { x: 55, y: 26, z: -65, c: 0x2563eb, s: 85, o: 0.11 },
+    { x: 5, y: 42, z: -85, c: 0xdb2777, s: 60, o: 0.10 }
+  ];
+  for (const n of nebulae) {
+    const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: makeGlowTexture(), color: n.c, transparent: true, opacity: n.o, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+    spr.position.set(n.x, n.y, n.z);
+    spr.scale.setScalar(n.s);
+    scene.add(spr);
+  }
 }
 
 // ---------- Langit: bintang, bintang jatuh & planet 3D ----------
@@ -1057,6 +1252,13 @@ function rebuildPads() {
     ring.position.y = 0.32;
     g.add(ring);
     padRings.set(p, ringMat);
+    const glowDisc = new THREE.Mesh(
+      new THREE.CircleGeometry(1.9, 28),
+      new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.08, blending: THREE.AdditiveBlending, depthWrite: false })
+    );
+    glowDisc.rotation.x = -Math.PI / 2;
+    glowDisc.position.y = 0.02;
+    g.add(glowDisc);
     const hit = new THREE.Mesh(new THREE.CylinderGeometry(1.9, 1.9, 3, 8), hitMat);
     hit.position.y = 1.2;
     hit.userData.pad = p;
@@ -1108,6 +1310,7 @@ function applyLayout(n, towerMode) {
 const serverGroup = new THREE.Group();
 serverGroup.position.set(X(915), 0, Z(240));
 let serverLights = [];
+let serverHolo = [];
 {
   const rackMat = new THREE.MeshStandardMaterial({ color: 0x1e2148, roughness: 0.4, metalness: 0.6 });
   const rack = new THREE.Mesh(new THREE.BoxGeometry(2.4, 4.4, 1.8), rackMat);
@@ -1144,6 +1347,30 @@ let serverLights = [];
   glowRing.rotation.x = Math.PI / 2;
   glowRing.position.y = 0.12;
   serverGroup.add(glowRing);
+  // beam cahaya ke langit + cincin hologram berputar
+  const beam = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.5, 0.9, 16, 16, 1, true),
+    new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.10, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide })
+  );
+  beam.position.y = 13;
+  serverGroup.add(beam);
+  for (const [ry, rr] of [[6.4, 2.7], [7.0, 2.2]]) {
+    const holo = new THREE.Mesh(
+      new THREE.TorusGeometry(rr, 0.05, 8, 48),
+      new THREE.MeshBasicMaterial({ color: 0x67e8f9, transparent: true, opacity: 0.7 })
+    );
+    holo.rotation.x = Math.PI / 2;
+    holo.position.y = ry;
+    holo.userData.spin = (ry === 6.4 ? 1 : -1) * 0.4;
+    const orb = new THREE.Mesh(
+      new THREE.SphereGeometry(0.14, 10, 10),
+      new THREE.MeshBasicMaterial({ color: 0xa5f3fc })
+    );
+    orb.position.set(rr, 0, 0);
+    holo.add(orb);
+    serverGroup.add(holo);
+    serverHolo.push(holo);
+  }
 }
 scene.add(serverGroup);
 // server HP bar (billboard sprites)
@@ -1196,7 +1423,7 @@ function showRange(x, z, rangePx, colorHex) {
 }
 function hideRange() { rangeGroup.visible = false; }
 
-// ---------- Towers (3D): robot Codero dari gambar, dibangun dari primitif 3D ----------
+// ---------- Towers (3D): robot dari gambar, dibangun dari primitif 3D ----------
 const towerHitMeshes = [];
 const ROBOT_STYLE = {
   blaster: { face: 0xfacc15, helmet: 0x1e3a8a, body: 0x262626, belly: 0x3f3f46, feet: 0xfacc15, accent: 0xfacc15 },
@@ -1309,7 +1536,7 @@ function buildRobot(type, projColor) {
   armR.add(gun);
   armR.rotation.x = -1.1; // posisi siap menembak
   bodyG.add(armR);
-  return { robot, bodyG, armR, flash };
+  return { robot, bodyG, armR, armL, flash };
 }
 function makeTowerMesh(type) {
   const cfg = TOWERS[type];
@@ -1551,6 +1778,17 @@ const MELODY = [
   79,0,77,0,76,0,74,72,
   76,0,74,0,72,0,69,0
 ];
+// melodi mancing 64 ketuk (pentatonik, jarang-jarang biar santai)
+const FISH_MELODY = [
+  72,0,0,0, 69,0,0,0,
+  67,0,0,0, 69,0,72,0,
+  74,0,0,0, 72,0,0,0,
+  69,0,0,67, 0,0,0,0,
+  72,0,0,0, 74,0,0,0,
+  76,0,74,0, 72,0,69,0,
+  67,0,0,0, 69,0,0,0,
+  72,0,0,0, 0,0,0,0
+];
 let musicGain = null, noiseBuf = null;
 let musicOn = false, musicEnabled = true, musicMode = 'menu';
 let musicTimer = null, musicStep = 0, nextNoteTime = 0, musicNotes = 0;
@@ -1609,6 +1847,18 @@ function playMusicStep(step, t) {
     if (beat === 4) musicTone(midi(ch.root + 7), t, 0.5, 'sine', 0.05);
     return;
   }
+  if (musicMode === 'fish') {
+    // santai: pad lembut per bar + melodi pentatonik jarang + tetesan air
+    if (beat === 0) {
+      musicTone(midi(ch.root), t, 1.8, 'sine', 0.07);
+      musicTone(midi(ch.root + 7), t, 1.8, 'sine', 0.045);
+    }
+    const fm = FISH_MELODY[step];
+    if (fm) musicTone(midi(fm), t, 0.5, 'triangle', 0.05);
+    if (step % 16 === 6) musicTone(midi(88), t, 0.35, 'sine', 0.04);
+    if (step % 16 === 14) musicTone(midi(84), t, 0.3, 'sine', 0.03);
+    return;
+  }
   const bassPat = [0, 0, 12, 0, 0, 12, 0, 7];
   musicTone(midi(ch.root + bassPat[beat]), t, 0.2, 'triangle', 0.13);
   const m = MELODY[step];
@@ -1642,13 +1892,20 @@ function stopMusic() {
 }
 function setMusicMode(mode) {
   musicMode = mode;
-  if (musicEnabled && AC) startMusic();
+  if (musicEnabled) startMusic();
 }
+// gestur pertama user: bangunkan AudioContext (autoplay policy) + nyalakan musik
+window.addEventListener('pointerdown', () => {
+  try {
+    if (AC && AC.state === 'suspended') AC.resume();
+    if (musicEnabled && !musicOn) startMusic();
+  } catch (e) {}
+}, { passive: true });
 function toggleMusic() {
   musicEnabled = !musicEnabled;
   const btn = $('musicBtn');
   btn.classList.toggle('off', !musicEnabled);
-  btn.textContent = musicEnabled ? '🎵' : '🔇';
+  btn.textContent = musicEnabled ? '🎵 Musik' : '🔇 Musik';
   if (musicEnabled) startMusic(); else stopMusic();
 }
 
@@ -1674,10 +1931,39 @@ function updateHUD() {
 
 // ---------- Drag & drop dari kartu toko ----------
 let dragType = null, dragStart = null, dragging = false, justDragged = false;
-const dragGhost = document.createElement('div');
-dragGhost.id = 'dragGhost';
-dragGhost.innerHTML = '<img alt="">';
-document.body.appendChild(dragGhost);
+// hantu drag = robot 3D asli (bukan gambar 2D): melayang + berputar, semi-transparan
+let ghostRobot = null;
+const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+const groundHit = new THREE.Vector3();
+function showGhostRobot(type) {
+  hideGhostRobot();
+  const built = buildRobot(type, TOWERS[type].proj);
+  built.robot.traverse(o => {
+    if (o.isMesh) {
+      o.material.transparent = true;
+      o.material.opacity = 0.8;
+      o.castShadow = false;
+    }
+  });
+  ghostRobot = built;
+  scene.add(built.robot);
+}
+function hideGhostRobot() {
+  if (!ghostRobot) return;
+  scene.remove(ghostRobot.robot);
+  ghostRobot.robot.traverse(o => {
+    if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); }
+  });
+  ghostRobot = null;
+}
+function groundAtClient(cx, cy) {
+  const rect = renderer.domElement.getBoundingClientRect();
+  pointerNDC.x = ((cx - rect.left) / rect.width) * 2 - 1;
+  pointerNDC.y = -((cy - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(pointerNDC, camera);
+  if (!raycaster.ray.intersectPlane(groundPlane, groundHit)) return null;
+  return { x: THREE.MathUtils.clamp(groundHit.x, -24, 24), z: THREE.MathUtils.clamp(groundHit.z, -15, 15) };
+}
 function padAtClient(cx, cy) {
   const rect = renderer.domElement.getBoundingClientRect();
   pointerNDC.x = ((cx - rect.left) / rect.width) * 2 - 1;
@@ -1698,18 +1984,19 @@ function attachDrag(card, key) {
     if (!dragType || !dragStart) return;
     if (!dragging && Math.hypot(e.clientX - dragStart.x, e.clientY - dragStart.y) > 12) {
       dragging = true;
-      dragGhost.querySelector('img').src = SPRITES[dragType];
-      dragGhost.classList.add('show');
+      showGhostRobot(dragType);
       selectedBuild = dragType;
       hidePanel();
       document.querySelectorAll('.card').forEach(c => c.classList.toggle('selected', c.dataset.key === dragType));
       updateRangeRing();
     }
     if (dragging) {
-      dragGhost.style.left = e.clientX + 'px';
-      dragGhost.style.top = e.clientY + 'px';
       const pad = padAtClient(e.clientX, e.clientY);
       if (pad !== hoveredPad) { hoveredPad = pad; updateRangeRing(); }
+      if (ghostRobot) {
+        if (pad) { ghostRobot.robot.position.x = X(pad.x); ghostRobot.robot.position.z = Z(pad.y); }
+        else { const g = groundAtClient(e.clientX, e.clientY); if (g) { ghostRobot.robot.position.x = g.x; ghostRobot.robot.position.z = g.z; } }
+      }
     }
   });
   const endDrag = () => {
@@ -1721,7 +2008,7 @@ function attachDrag(card, key) {
       } else if (hoveredPad) {
         toast('Platform sudah terisi!');
       }
-      dragGhost.classList.remove('show');
+      hideGhostRobot();
       selectedBuild = null;
       document.querySelectorAll('.card').forEach(c => c.classList.remove('selected'));
       hoveredPad = null;
@@ -1754,6 +2041,17 @@ function selectBuild(key) {
   selectedTower = null; hidePanel();
   document.querySelectorAll('.card').forEach(c => c.classList.toggle('selected', c.dataset.key === selectedBuild));
   updateRangeRing();
+}
+// animasi kartu shop muncul satu-satu dari bawah (dipanggil tiap start stage)
+function animateShopCards() {
+  const cards = document.querySelectorAll('.card');
+  cards.forEach((card, i) => {
+    card.classList.remove('enter');
+    void card.offsetWidth; // restart animasi
+    card.style.animationDelay = (i * 0.09) + 's';
+    card.classList.add('enter');
+  });
+  setTimeout(() => cards.forEach(c => c.classList.remove('enter')), 1100);
 }
 function towerStats(t) {
   const base = TOWERS[t.type];
@@ -1837,7 +2135,7 @@ function startWave() {
   if (state !== 'build') return;
   wave++;
   spawnQueue = buildQueue(wave);
-  spawnInterval = wave >= 8 ? 0.65 : 0.85;
+  spawnInterval = wave >= 8 ? 0.75 : 1.0;
   spawnTimer = 0.5;
   state = 'wave';
   sfxWave();
@@ -1858,6 +2156,987 @@ function spawnEnemy(type) {
     r: base.r, reward: base.reward, lives: base.lives,
     progress: 0, slowT: 0, attackCd: 0, lunge: 0, wob: Math.random() * Math.PI * 2, mesh
   });
+}
+
+// ---------- Mancing 3D ----------
+// mode permainan: 'tower' (tower defense) atau 'fish' (mancing)
+let playMode = 'tower';
+const FISH_RARITY = {
+  biasa: { name: 'Biasa', color: '#9aa0c3', rounds: 1, zone: 0.32, speed: 1.0 },
+  jarang: { name: 'Jarang', color: '#38bdf8', rounds: 1, zone: 0.26, speed: 1.25 },
+  langka: { name: 'Langka', color: '#a78bfa', rounds: 2, zone: 0.22, speed: 1.5 },
+  epik: { name: 'Epik', color: '#f472b6', rounds: 2, zone: 0.18, speed: 1.8 },
+  legendaris: { name: 'Legendaris', color: '#facc15', rounds: 3, zone: 0.14, speed: 2.1 }
+};
+// 12 spesies ikan RNG: bobot = peluang muncul, ukuran cm acak di rentang min-max
+const FISH = [
+  { id: 'mas', name: 'Ikan Mas', emoji: '🐟', rarity: 'biasa', weight: 30, min: 15, max: 40, color: 0xf97316 },
+  { id: 'lele', name: 'Ikan Lele', emoji: '🐡', rarity: 'biasa', weight: 28, min: 20, max: 60, color: 0x4b5563 },
+  { id: 'nila', name: 'Ikan Nila', emoji: '🐠', rarity: 'biasa', weight: 25, min: 15, max: 35, color: 0x7dd3fc },
+  { id: 'koki', name: 'Ikan Mas Koki', emoji: '🐡', rarity: 'biasa', weight: 20, min: 5, max: 15, color: 0xfb923c },
+  { id: 'gurame', name: 'Ikan Gurame', emoji: '🐟', rarity: 'jarang', weight: 15, min: 25, max: 60, color: 0x92400e },
+  { id: 'koi', name: 'Ikan Koi', emoji: '🐠', rarity: 'jarang', weight: 12, min: 20, max: 50, color: 0xf8fafc },
+  { id: 'patin', name: 'Ikan Patin', emoji: '🐟', rarity: 'jarang', weight: 10, min: 30, max: 70, color: 0xcbd5e1 },
+  { id: 'cupang', name: 'Ikan Cupang', emoji: '🐠', rarity: 'jarang', weight: 9, min: 3, max: 8, color: 0xef4444 },
+  { id: 'arwana', name: 'Ikan Arwana', emoji: '🐉', rarity: 'langka', weight: 8, min: 30, max: 80, color: 0xfacc15 },
+  { id: 'hiu', name: 'Ikan Hiu', emoji: '🦈', rarity: 'epik', weight: 4, min: 100, max: 250, color: 0x64748b },
+  { id: 'pari', name: 'Ikan Pari', emoji: '🐙', rarity: 'epik', weight: 3, min: 80, max: 200, color: 0x78350f },
+  { id: 'paus', name: 'Ikan Paus', emoji: '🐋', rarity: 'legendaris', weight: 2, min: 300, max: 800, color: 0x1e3a8a }
+];
+const FISH_RODS = [
+  { id: 'bambu', name: 'Pancingan Bambu', emoji: '🎋', price: 0, luck: 0, mut: 0, desc: 'Pancingan awal, sederhana tapi setia.', color: '#d2a679', shaft: 0xd2a679, shaftRough: 0.85, grip: 0x8b5a2b, ring: 0x92400e, ringGlow: false, tip: null },
+  { id: 'jati', name: 'Pancingan Jati', emoji: '🪵', price: 150, luck: 0.10, mut: 0.02, desc: 'Kayu jati kokoh, ikan jarang lebih sering nyangkut.', color: '#a16207', shaft: 0x6b4226, shaftRough: 0.6, grip: 0x3f2d20, ring: 0xd4af37, ringGlow: false, tip: null },
+  { id: 'fiber', name: 'Pancingan Fiber', emoji: '🎣', price: 400, luck: 0.25, mut: 0.05, desc: 'Ringan dan kuat, luck naik jauh.', color: '#22d3ee', shaft: 0x23272e, shaftRough: 0.35, metal: 0.6, grip: 0x111827, ring: 0x22d3ee, ringGlow: true, tip: 0x22d3ee },
+  { id: 'titanium', name: 'Pancingan Titanium', emoji: '⚙️', price: 1000, luck: 0.45, mut: 0.10, desc: 'Buatan pro, ikan epik mulai melirik.', color: '#94a3b8', shaft: 0xd1d5db, shaftRough: 0.25, metal: 0.9, grip: 0x1e3a8a, ring: 0x60a5fa, ringGlow: true, tip: 0x60a5fa },
+  { id: 'legenda', name: 'Legenda Samudra', emoji: '👑', price: 2500, luck: 0.80, mut: 0.20, desc: 'Pancingan mitos — paus pun bisa kena.', color: '#facc15', shaft: 0xf5c542, shaftRough: 0.3, metal: 0.85, grip: 0x7c2d12, ring: 0x38bdf8, ringGlow: true, tip: 0x38bdf8, orb: true }
+];
+const FISH_VALUE = { biasa: 10, jarang: 25, langka: 60, epik: 150, legendaris: 400 };
+const AQUA_MAX = 5;
+const FISH_SPOTS = [
+  { name: 'Dermaga Utama', x: 0, z: 8.6, luck: 0 },
+  { name: 'Batu Karang', x: 8.6, z: 0, luck: 0.10 },
+  { name: 'Teratai Sunyi', x: -8.6, z: 0, luck: 0.15 },
+  { name: 'Air Dalam', x: 0, z: -8.6, luck: 0.25 }
+];
+let fishCollection = { caught: {}, total: 0, coins: 0, rods: ['bambu'], rod: 'bambu', aquarium: [], fav: [] };
+function loadFishCollection() {
+  try {
+    const raw = localStorage.getItem('codero3d-fish');
+    if (raw) fishCollection = { caught: {}, total: 0, coins: 0, rods: ['bambu'], rod: 'bambu', aquarium: [], fav: [], ...JSON.parse(raw) };
+  } catch (_) {}
+}
+function saveFishCollection() {
+  try { localStorage.setItem('codero3d-fish', JSON.stringify(fishCollection)); } catch (_) {}
+}
+function fishCaughtCount() { return Object.keys(fishCollection.caught).length; }
+function currentRod() { return FISH_RODS.find(r => r.id === fishCollection.rod) || FISH_RODS[0]; }
+function fishValue(f) {
+  const base = FISH_VALUE[f.rarity] || 10;
+  const mul = f.variant === 'RAKSASA' ? 3 : f.variant === 'Mini' ? 0.5 : 1;
+  return Math.max(1, Math.round(base * (0.5 + f.size / f.max) * mul));
+}
+function activeSpot(x, z) {
+  let best = null, bestD = 4.5;
+  for (const s of FISH_SPOTS) {
+    const d = Math.hypot(x - s.x, z - s.z);
+    if (d < bestD) { bestD = d; best = s; }
+  }
+  return best;
+}
+function rollFish() {
+  const rod = currentRod();
+  const spot = activeSpot(fisherman.x, fisherman.z);
+  const luck = rod.luck + (spot ? spot.luck : 0);
+  let totalW = 0;
+  const weights = FISH.map(f => {
+    const w = f.weight * (f.rarity === 'biasa' ? 1 : (1 + luck));
+    totalW += w;
+    return w;
+  });
+  let r = Math.random() * totalW;
+  let sp = FISH[0];
+  for (let i = 0; i < FISH.length; i++) { r -= weights[i]; if (r <= 0) { sp = FISH[i]; break; } }
+  let size = sp.min + Math.random() * (sp.max - sp.min);
+  let variant = '';
+  const vr = Math.random();
+  if (vr < 0.05 + rod.mut / 2) { size *= 1.8; variant = 'RAKSASA'; }
+  else if (vr < 0.10 + rod.mut) { size *= 0.5; variant = 'Mini'; }
+  size = Math.round(size * 10) / 10;
+  return { ...sp, size, variant, weightKg: Math.round(size * 0.04 * 10) / 10 };
+}
+
+// ---------- Scene mancing ----------
+const fishGroup = new THREE.Group();
+fishGroup.visible = false;
+scene.add(fishGroup);
+let fishBobber = null, fishLine = null, fisherRodGroup = null;
+let pondFish = [], fishRipples = [], fishJumpAnim = null;
+let fishFisher = null, heldFish = null;
+let fisherman = { x: 0, z: 8.6 }, fishPrevPos = { x: 0, z: 8.6 }, fishKeys = {}, joyVec = { x: 0, y: 0 }, lastSpotKey = '';
+let fishPrevCamMode = 'rotate';
+let fireflies = null, fireflyBase = [], bubbles = [], ambientRipples = [];
+let aquaFishGroup = null, aquaFish = [];
+function rodTipWorld() {
+  fishFisher.robot.updateMatrixWorld();
+  return fishFisher.robot.localToWorld(new THREE.Vector3(0.85, 3.87, 4.09));
+}
+// bangun ulang joran 3D sesuai pancingan yang dipakai (panjang & kemiringan tetap supaya ujung joran tidak bergeser)
+function renderFisherRod() {
+  if (!fisherRodGroup) return;
+  while (fisherRodGroup.children.length) {
+    const c = fisherRodGroup.children.pop();
+    c.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
+    fisherRodGroup.remove(c);
+  }
+  const r = currentRod();
+  const shaftGeo = new THREE.CylinderGeometry(0.035, 0.06, 4.5, 8);
+  shaftGeo.translate(0, 2.25, 0);
+  fisherRodGroup.add(new THREE.Mesh(shaftGeo, stdMat(r.shaft, r.shaftRough, r.metal || 0.15)));
+  const gripGeo = new THREE.CylinderGeometry(0.09, 0.09, 0.7, 8);
+  gripGeo.translate(0, 0.35, 0);
+  fisherRodGroup.add(new THREE.Mesh(gripGeo, stdMat(r.grip, 0.8)));
+  const ringMat = r.ringGlow ? stdMat(r.ring, 0.4, 0.2, r.ring, 1.6) : stdMat(r.ring, 0.5, 0.6);
+  [1.5, 2.7, 3.9].forEach((y, i) => {
+    const g = new THREE.CylinderGeometry(0.07, 0.07, 0.09, 8);
+    g.translate(0, y, 0);
+    fisherRodGroup.add(new THREE.Mesh(g, ringMat));
+  });
+  if (r.tip) {
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 8), new THREE.MeshBasicMaterial({ color: r.tip }));
+    tip.position.y = 4.5;
+    fisherRodGroup.add(tip);
+  }
+  if (r.orb) {
+    const orb = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 10), new THREE.MeshBasicMaterial({ color: 0x38bdf8 }));
+    orb.position.y = 4.25;
+    fisherRodGroup.add(orb);
+  }
+}
+function buildFishMesh(color) {
+  const g = new THREE.Group();
+  const mat = stdMat(color, 0.4);
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.5, 12, 10), mat);
+  body.scale.set(1.8, 1, 0.65);
+  g.add(body);
+  const tail = new THREE.Mesh(new THREE.ConeGeometry(0.32, 0.55, 4), mat);
+  tail.rotation.z = Math.PI / 2;
+  tail.position.x = -1.05;
+  tail.scale.set(1, 1, 0.35);
+  g.add(tail);
+  const fin = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.4, 4), mat);
+  fin.position.set(0.1, 0.5, 0);
+  fin.scale.set(1, 1, 0.3);
+  g.add(fin);
+  const eyeMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
+  for (const sz of [-1, 1]) {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), eyeMat);
+    eye.position.set(0.62, 0.12, sz * 0.28);
+    g.add(eye);
+  }
+  return { group: g, tail };
+}
+function buildFishingScene() {
+  // dasar kolam (gelap) + air semi-transparan — kolam diperbesar (r 19)
+  const bed = new THREE.Mesh(new THREE.CircleGeometry(19.6, 48), new THREE.MeshStandardMaterial({ color: 0x0c4a6e, roughness: 0.9 }));
+  bed.rotation.x = -Math.PI / 2; bed.position.y = 0.02;
+  fishGroup.add(bed);
+  const water = new THREE.Mesh(new THREE.CircleGeometry(19, 48), new THREE.MeshStandardMaterial({ color: 0x0ea5e9, roughness: 0.15, metalness: 0.1, transparent: true, opacity: 0.82 }));
+  water.rotation.x = -Math.PI / 2; water.position.y = 0.06;
+  fishGroup.add(water);
+  // cincin pasir di tepi kolam
+  const rim = new THREE.Mesh(new THREE.RingGeometry(19, 20.6, 48), new THREE.MeshStandardMaterial({ color: 0x92400e, roughness: 1 }));
+  rim.rotation.x = -Math.PI / 2; rim.position.y = 0.04;
+  fishGroup.add(rim);
+  // batu-batu di tepi kolam
+  const rockMat = stdMat(0x64748b, 0.9);
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2 + Math.random() * 0.4;
+    const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.5 + Math.random() * 0.5, 0), rockMat);
+    rock.position.set(Math.cos(a) * 20.4, 0.3, Math.sin(a) * 20.4);
+    rock.rotation.set(Math.random() * 3, Math.random() * 3, Math.random() * 3);
+    rock.castShadow = true;
+    fishGroup.add(rock);
+  }
+  // daun teratai + bunga lotus
+  const lilyMat = stdMat(0x16a34a, 0.6);
+  const lotusMat = stdMat(0xf472b6, 0.5);
+  for (let i = 0; i < 8; i++) {
+    const a = Math.random() * Math.PI * 2, r = 4 + Math.random() * 11;
+    const lily = new THREE.Mesh(new THREE.CylinderGeometry(0.8 + Math.random() * 0.5, 0.8 + Math.random() * 0.5, 0.06, 20), lilyMat);
+    lily.position.set(Math.cos(a) * r, 0.09, Math.sin(a) * r);
+    fishGroup.add(lily);
+    if (i < 3) {
+      const lotus = new THREE.Mesh(new THREE.ConeGeometry(0.35, 0.5, 8), lotusMat);
+      lotus.position.set(lily.position.x, 0.3, lily.position.z);
+      fishGroup.add(lotus);
+    }
+  }
+  // alang-alang di tepi kolam (hindari area dermaga)
+  const reedMat = stdMat(0x15803d, 0.8);
+  const reedTipMat = stdMat(0x78350f, 0.8);
+  for (let i = 0; i < 14; i++) {
+    const a = (i / 14) * Math.PI * 2 + Math.random() * 0.3;
+    const nearPier = [0, Math.PI / 2, Math.PI, Math.PI * 1.5].some(pa => Math.abs(Math.atan2(Math.sin(a - pa), Math.cos(a - pa))) < 0.35);
+    if (nearPier) continue;
+    const r = 20.2 + Math.random() * 1;
+    const cluster = new THREE.Group();
+    cluster.position.set(Math.cos(a) * r, 0, Math.sin(a) * r);
+    for (let k = 0; k < 3; k++) {
+      const h = 1.2 + Math.random() * 0.9;
+      const reed = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.06, h, 6), reedMat);
+      reed.position.set((Math.random() - 0.5) * 0.5, h / 2, (Math.random() - 0.5) * 0.5);
+      reed.rotation.z = (Math.random() - 0.5) * 0.25;
+      cluster.add(reed);
+      if (k === 0) {
+        const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.5, 6), reedTipMat);
+        tip.position.set(reed.position.x, h + 0.2, reed.position.z);
+        cluster.add(tip);
+      }
+    }
+    fishGroup.add(cluster);
+  }
+  // 4 dermaga kayu (spot mancing): selatan, timur, barat, utara
+  const woodMat = stdMat(0x8b5a2b, 0.8);
+  const woodDark = stdMat(0x6b4423, 0.8);
+  function buildPier(rotY) {
+    const pier = new THREE.Group();
+    for (let z = 20.4; z >= 8.2; z -= 1.25) {
+      const plank = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.22, 1.15), (Math.round(z) % 2 === 0) ? woodMat : woodDark);
+      plank.position.set(0, 0.35, z);
+      plank.castShadow = true; plank.receiveShadow = true;
+      pier.add(plank);
+    }
+    for (const sx of [-1.1, 1.1]) {
+      for (const z of [8.4, 20.2]) {
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 1.1, 8), woodDark);
+        post.position.set(sx, 0.5, z);
+        pier.add(post);
+      }
+    }
+    pier.rotation.y = rotY;
+    return pier;
+  }
+  fishGroup.add(buildPier(0), buildPier(Math.PI / 2), buildPier(-Math.PI / 2), buildPier(Math.PI));
+  // lentera di ujung dermaga selatan + cahaya hangat
+  for (const sx of [-1.3, 1.3]) {
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 1.8, 8), woodDark);
+    pole.position.set(sx, 1.2, 8.6);
+    fishGroup.add(pole);
+    const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.24, 12, 12), new THREE.MeshStandardMaterial({ color: 0x78350f, emissive: 0xffb347, emissiveIntensity: 2.5 }));
+    lamp.position.set(sx, 2.2, 8.6);
+    fishGroup.add(lamp);
+    const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: makeGlowTexture(), color: 0xffb347, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false }));
+    glow.scale.setScalar(1.6);
+    glow.position.set(sx, 2.2, 8.6);
+    fishGroup.add(glow);
+  }
+  const dockLight = new THREE.PointLight(0xffb347, 10, 16, 2);
+  dockLight.position.set(0, 2.5, 8.6);
+  fishGroup.add(dockLight);
+  // robot pemancing (bisa jalan) + joran menempel di robot
+  fishFisher = buildRobot('blaster', TOWERS.blaster.proj);
+  fishFisher.robot.position.set(fisherman.x, 0.46, fisherman.z);
+  fishFisher.robot.rotation.y = Math.PI;
+  fishFisher.armR.rotation.x = -0.5;
+  const rodGroup = new THREE.Group();
+  rodGroup.position.set(0.85, 1.44, 0.3);
+  rodGroup.rotation.x = 1.0;
+  fishFisher.robot.add(rodGroup);
+  fisherRodGroup = rodGroup;
+  renderFisherRod();
+  fishGroup.add(fishFisher.robot);
+  // tali pancing (garis dari ujung joran ke pelampung)
+  const lineGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 4, 4), new THREE.Vector3(0, 0.1, 0)]);
+  fishLine = new THREE.Line(lineGeo, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.55 }));
+  fishLine.visible = false;
+  fishGroup.add(fishLine);
+  // pelampung merah-putih
+  fishBobber = new THREE.Group();
+  const bobTop = new THREE.Mesh(new THREE.SphereGeometry(0.32, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2), stdMat(0xef4444, 0.4));
+  const bobBottom = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 12, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), stdMat(0xf8fafc, 0.4));
+  const bobStick = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.5, 6), stdMat(0xfacc15, 0.4));
+  bobStick.position.y = 0.45;
+  fishBobber.add(bobTop, bobBottom, bobStick);
+  fishBobber.visible = false;
+  fishGroup.add(fishBobber);
+  // ikan-ikan berenang di kolam
+  const pondColors = [0xf97316, 0x7dd3fc, 0xfacc15, 0xef4444, 0xf8fafc, 0x4ade80, 0xfb923c, 0x38bdf8, 0xa78bfa, 0xf472b6, 0x22d3ee, 0xfacc15];
+  for (let i = 0; i < 12; i++) {
+    const f = buildFishMesh(pondColors[i]);
+    const r = 3 + Math.random() * 13;
+    f.group.scale.setScalar(0.6 + Math.random() * 0.6);
+    fishGroup.add(f.group);
+    pondFish.push({ ...f, r, a: Math.random() * Math.PI * 2, speed: (0.1 + Math.random() * 0.2) * (Math.random() < 0.5 ? 1 : -1) });
+  }
+  // cincin riak air (dipakai saat strike)
+  for (let i = 0; i < 3; i++) {
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.9, 1, 32), new THREE.MeshBasicMaterial({ color: 0xbae6fd, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }));
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.1;
+    ring.visible = false;
+    fishGroup.add(ring);
+    fishRipples.push({ mesh: ring, t: 0 });
+  }
+  // riak air ambient (mengembang terus di titik tetap)
+  for (let i = 0; i < 4; i++) {
+    const a = Math.random() * Math.PI * 2, r = 4 + Math.random() * 10;
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.9, 1, 32), new THREE.MeshBasicMaterial({ color: 0xbae6fd, transparent: true, opacity: 0.3, side: THREE.DoubleSide, depthWrite: false }));
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.set(Math.cos(a) * r, 0.08, Math.sin(a) * r);
+    fishGroup.add(ring);
+    ambientRipples.push({ mesh: ring, t: i * 0.6 });
+  }
+  // kunang-kunang di sekitar kolam
+  const flyCount = 20;
+  const flyPos = new Float32Array(flyCount * 3);
+  for (let i = 0; i < flyCount; i++) {
+    const a = Math.random() * Math.PI * 2, r = 16 + Math.random() * 12;
+    const bx = Math.cos(a) * r, by = 1 + Math.random() * 3, bz = Math.sin(a) * r;
+    flyPos.set([bx, by, bz], i * 3);
+    fireflyBase.push({ x: bx, y: by, z: bz, p: Math.random() * Math.PI * 2 });
+  }
+  const flyGeo = new THREE.BufferGeometry();
+  flyGeo.setAttribute('position', new THREE.BufferAttribute(flyPos, 3));
+  fireflies = new THREE.Points(flyGeo, new THREE.PointsMaterial({ size: 0.35, map: makeGlowTexture(), color: 0xfde68a, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
+  fishGroup.add(fireflies);
+  // gelembung naik di kolam
+  const bubMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35 });
+  for (let i = 0; i < 10; i++) {
+    const a = Math.random() * Math.PI * 2, r = 3 + Math.random() * 13;
+    const b = new THREE.Mesh(new THREE.SphereGeometry(0.08 + Math.random() * 0.08, 8, 8), bubMat);
+    b.position.set(Math.cos(a) * r, -0.5 - Math.random() * 0.5, Math.sin(a) * r);
+    fishGroup.add(b);
+    bubbles.push(b);
+  }
+  // aquarium pajangan di darat (kiri depan)
+  const aqua = new THREE.Group();
+  aqua.position.set(-24, 0, 14);
+  const stand = new THREE.Mesh(new THREE.BoxGeometry(7.2, 1, 3.8), stdMat(0x6b4423, 0.7));
+  stand.position.y = 0.5;
+  stand.castShadow = true;
+  aqua.add(stand);
+  const glass = new THREE.Mesh(new THREE.BoxGeometry(6.8, 3.2, 3.4), new THREE.MeshStandardMaterial({ color: 0xbae6fd, transparent: true, opacity: 0.15, roughness: 0.05, metalness: 0.1 }));
+  glass.position.y = 2.6;
+  aqua.add(glass);
+  const aquaWater = new THREE.Mesh(new THREE.BoxGeometry(6.5, 2.7, 3.1), new THREE.MeshStandardMaterial({ color: 0x0ea5e9, transparent: true, opacity: 0.45, roughness: 0.1 }));
+  aquaWater.position.y = 2.5;
+  aqua.add(aquaWater);
+  const sand = new THREE.Mesh(new THREE.BoxGeometry(6.5, 0.2, 3.1), stdMat(0xd6b98a, 1));
+  sand.position.y = 1.15;
+  aqua.add(sand);
+  const plantMat = stdMat(0x16a34a, 0.6);
+  for (const px of [-2.5, 2.2]) {
+    const plant = new THREE.Mesh(new THREE.ConeGeometry(0.35, 1.2, 6), plantMat);
+    plant.position.set(px, 1.8, 0.5);
+    aqua.add(plant);
+  }
+  const chest = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.5, 0.5), stdMat(0x92400e, 0.7));
+  chest.position.set(0.8, 1.5, -0.6);
+  aqua.add(chest);
+  const aquaGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: makeGlowTexture(), color: 0x38bdf8, transparent: true, opacity: 0.25, blending: THREE.AdditiveBlending, depthWrite: false }));
+  aquaGlow.scale.setScalar(9);
+  aquaGlow.position.y = 2.6;
+  aqua.add(aquaGlow);
+  fishGroup.add(aqua);
+  aquaFishGroup = new THREE.Group();
+  aquaFishGroup.position.set(-24, 0, 14);
+  fishGroup.add(aquaFishGroup);
+}
+buildFishingScene();
+loadFishCollection();
+
+// ---------- Logika mancing ----------
+// fishState: idle | casting | waiting | bite | minigame | caught
+let fishState = 'idle';
+let fishBiteTimer = 0, fishBiteWindow = 0, fishCastT = 0;
+let fishCastFrom = new THREE.Vector3(), fishCastTo = new THREE.Vector3();
+let hookedFish = null, fishMini = null;
+function updateFishHUD() {
+  const caught = fishCaughtCount();
+  $('fishCount').textContent = caught + '/' + FISH.length;
+  $('fishCoins').textContent = fishCollection.coins;
+  const st = $('fishStatus');
+  st.classList.remove('strike');
+  $('fishCastBtn').style.display = fishState === 'idle' ? 'flex' : 'none';
+  $('fishPullBtn').style.display = fishState === 'bite' ? 'flex' : 'none';
+  if (fishState === 'idle') {
+    const spot = activeSpot(fisherman.x, fisherman.z);
+    st.textContent = (spot && spot.luck > 0)
+      ? '📍 ' + spot.name + ' (+' + Math.round(spot.luck * 100) + '% luck) · 🎣 Lempar kailmu!'
+      : '🎣 Lempar kailmu ke kolam!';
+  }
+  else if (fishState === 'casting') st.textContent = '🎣 Kail dilempar…';
+  else if (fishState === 'waiting') st.textContent = '⏳ Menunggu gigitan…';
+  else if (fishState === 'bite') { st.textContent = '❗ STRIKE! Klik TARIK sekarang!'; st.classList.add('strike'); }
+  else if (fishState === 'minigame') st.textContent = '🎯 Pasang jarum di zona hijau!';
+  else if (fishState === 'caught') st.textContent = '🎉 Dapat ikan!';
+}
+function fishCast() {
+  if (playMode !== 'fish' || fishState !== 'idle') return;
+  clearHeldFish();
+  // lempar ke arah tengah kolam dari posisi char
+  const dx = -fisherman.x, dz = -fisherman.z;
+  const dl = Math.hypot(dx, dz) || 1;
+  const dist = 4 + Math.random() * 6;
+  let tx = fisherman.x + (dx / dl) * dist;
+  let tz = fisherman.z + (dz / dl) * dist;
+  const tr = Math.hypot(tx, tz);
+  if (tr > 17) { tx *= 17 / tr; tz *= 17 / tr; }
+  fishCastFrom.copy(rodTipWorld());
+  fishCastTo.set(tx, 0.1, tz);
+  fishCastT = 0;
+  fishState = 'casting';
+  fishBobber.visible = true;
+  fishBobber.position.copy(fishCastFrom);
+  fishLine.visible = true;
+  beep(600, 0.12, 'sine', 0.05);
+  updateFishHUD();
+}
+function fishStartBite() {
+  fishState = 'bite';
+  fishBiteWindow = 2.5;
+  fishRipples.forEach((rp, i) => { rp.t = -i * 0.25; rp.mesh.visible = true; rp.mesh.position.set(fishBobber.position.x, 0.1, fishBobber.position.z); });
+  beep(880, 0.15, 'square', 0.06);
+  setTimeout(() => { if (fishState === 'bite') beep(880, 0.15, 'square', 0.06); }, 250);
+  updateFishHUD();
+}
+function fishPull() {
+  if (playMode !== 'fish' || fishState !== 'bite') return;
+  hookedFish = rollFish();
+  const rar = FISH_RARITY[hookedFish.rarity];
+  fishMini = { needle: 0, dir: 1, speed: 90 * rar.speed, zoneStart: 0, zoneW: rar.zone, round: 1, rounds: rar.rounds };
+  fishMini.zoneStart = Math.random() * (1 - fishMini.zoneW);
+  fishState = 'minigame';
+  $('fishGameTitle').textContent = '🎣 ' + hookedFish.emoji + ' ' + hookedFish.name + ' menyangkut!';
+  $('fishGameSub').textContent = 'Rarity: ' + rar.name + (hookedFish.variant ? ' · ' + hookedFish.variant : '');
+  $('fishGameSub').style.color = rar.color;
+  updateFishMiniUI();
+  $('fishGameModal').classList.add('show');
+  updateFishHUD();
+}
+function updateFishMiniUI() {
+  $('fishGameRound').textContent = 'Putaran ' + fishMini.round + ' / ' + fishMini.rounds;
+  const zone = $('fishZone');
+  zone.style.left = (fishMini.zoneStart * 100) + '%';
+  zone.style.width = (fishMini.zoneW * 100) + '%';
+}
+function fishMiniClick() {
+  if (playMode !== 'fish' || fishState !== 'minigame' || !fishMini) return;
+  const p = fishMini.needle / 100;
+  if (p >= fishMini.zoneStart && p <= fishMini.zoneStart + fishMini.zoneW) {
+    sfxWin();
+    if (fishMini.round >= fishMini.rounds) { fishCaught(); return; }
+    fishMini.round++;
+    fishMini.zoneW = Math.max(0.08, fishMini.zoneW * 0.85);
+    fishMini.zoneStart = Math.random() * (1 - fishMini.zoneW);
+    fishMini.speed *= 1.15;
+    fishMini.needle = Math.random() * 100;
+    fishMini.dir = Math.random() < 0.5 ? 1 : -1;
+    updateFishMiniUI();
+  } else {
+    fishEscape('💨 Ikan lepas! Jarum tidak kena zona hijau.');
+  }
+}
+function fishEscape(msg) {
+  $('fishGameModal').classList.remove('show');
+  fishState = 'idle';
+  hookedFish = null;
+  fishMini = null;
+  fishBobber.visible = false;
+  fishLine.visible = false;
+  toast(msg);
+  beep(180, 0.3, 'sawtooth', 0.06);
+  updateFishHUD();
+}
+function fishCaught() {
+  $('fishGameModal').classList.remove('show');
+  fishState = 'caught';
+  updateFishHUD();
+  // ikan melompat keluar air di posisi pelampung
+  const scale = THREE.MathUtils.clamp(hookedFish.size / 50, 0.25, 6);
+  const f = buildFishMesh(hookedFish.color);
+  f.group.scale.setScalar(scale);
+  f.group.position.copy(fishBobber.position);
+  f.group.position.y = 0.2;
+  fishGroup.add(f.group);
+  fishJumpAnim = { fish: f, t: 0, from: fishBobber.position.clone() };
+  sfxWin();
+}
+function fishShowResult() {
+  const f = hookedFish;
+  const rar = FISH_RARITY[f.rarity];
+  const prev = fishCollection.caught[f.id];
+  const isNew = !prev;
+  fishCollection.caught[f.id] = { count: (prev ? prev.count : 0) + 1, best: Math.max(prev ? prev.best : 0, f.size) };
+  fishCollection.total++;
+  saveFishCollection();
+  $('fishResultEmoji').textContent = f.emoji;
+  $('fishResultName').textContent = f.name + (f.variant ? ' ' + f.variant : '');
+  $('fishResultRarity').textContent = '★ ' + rar.name;
+  $('fishResultRarity').style.color = rar.color;
+  $('fishResultStats').textContent = '📏 ' + f.size + ' cm · ⚖️ ' + f.weightKg + ' kg';
+  $('fishResultNew').textContent = isNew ? '✨ Spesies baru! Koleksi ' + fishCaughtCount() + '/' + FISH.length : 'Terbesar: ' + fishCollection.caught[f.id].best + ' cm · Sudah dapat ' + fishCollection.caught[f.id].count + 'x';
+  $('fishResultSell').textContent = '💰 Jual (+' + fishValue(f) + ' 🪙)';
+  $('fishResultModal').classList.add('show');
+  fishBobber.visible = false;
+  fishLine.visible = false;
+  updateFishHUD();
+}
+function fishCloseResult() {
+  $('fishResultModal').classList.remove('show');
+  fishState = 'idle';
+  hookedFish = null;
+  updateFishHUD();
+}
+function fishSellResult() {
+  if (!hookedFish) return;
+  const val = fishValue(hookedFish);
+  const name = hookedFish.name;
+  fishCollection.coins += val;
+  const got = fishCollection.caught[hookedFish.id];
+  if (got) { got.count--; if (got.count <= 0) { delete fishCollection.caught[hookedFish.id]; removeFishFav(hookedFish.id); } }
+  saveFishCollection();
+  clearHeldFish();
+  $('fishResultModal').classList.remove('show');
+  fishState = 'idle';
+  hookedFish = null;
+  updateFishHUD();
+  toast('💰 ' + name + ' terjual +' + val + ' 🪙!');
+}
+// ikan dipegang robot DI ATAS KEPALA (dua tangan diangkat, pose pamer)
+function setHeldFish(info) {
+  clearHeldFish();
+  const scale = THREE.MathUtils.clamp(info.size / 50, 0.6, 3.5);
+  const f = buildFishMesh(info.color);
+  f.group.scale.setScalar(scale);
+  f.group.rotation.z = 0.25;
+  f.group.position.set(0, 3.4, 0.2);
+  fishFisher.robot.add(f.group);
+  fishFisher.armR.rotation.x = Math.PI;
+  fishFisher.armL.rotation.x = Math.PI;
+  heldFish = { ...f, info };
+}
+function clearHeldFish() {
+  if (!heldFish) return;
+  fishFisher.robot.remove(heldFish.group);
+  heldFish.group.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
+  heldFish = null;
+  fishFisher.armR.rotation.x = -0.5;
+  fishFisher.armL.rotation.x = 0;
+}
+function removeFishFav(id) {
+  const fav = fishCollection.fav || [];
+  const i = fav.indexOf(id);
+  if (i >= 0) fav.splice(i, 1);
+}
+function toggleFishFav(id) {
+  const fav = fishCollection.fav || (fishCollection.fav = []);
+  const i = fav.indexOf(id);
+  const sp = FISH.find(f => f.id === id);
+  if (i >= 0) { fav.splice(i, 1); toast('☆ ' + (sp ? sp.name : '') + ' bukan favorit lagi.'); }
+  else { fav.push(id); toast('⭐ ' + (sp ? sp.name : '') + ' jadi favorit — aman dari Jual Semua!'); }
+  saveFishCollection();
+  renderFishCollection();
+}
+function sellableFish() {
+  let n = 0, total = 0;
+  const fav = fishCollection.fav || [];
+  for (const id in fishCollection.caught) {
+    if (fav.includes(id)) continue;
+    const got = fishCollection.caught[id];
+    const sp = FISH.find(f => f.id === id);
+    if (!sp) continue;
+    const val = fishValue({ ...sp, size: got.best, variant: '' });
+    n += got.count; total += val * got.count;
+  }
+  return { n, total };
+}
+let sellAllArmed = false, sellAllTimer = null;
+function sellAllFish() {
+  const s = sellableFish();
+  if (s.n === 0) { toast('💰 Tidak ada ikan yang bisa dijual (semua favorit / koleksi kosong).'); return; }
+  const btn = $('fishSellAllBtn');
+  if (!sellAllArmed) {
+    sellAllArmed = true;
+    btn.textContent = '⚠️ Yakin jual ' + s.n + ' ikan (+' + s.total + ' 🪙)? Klik lagi!';
+    btn.classList.add('armed');
+    clearTimeout(sellAllTimer);
+    sellAllTimer = setTimeout(() => { sellAllArmed = false; renderFishCollection(); }, 10000);
+    return;
+  }
+  sellAllArmed = false;
+  clearTimeout(sellAllTimer);
+  const fav = fishCollection.fav || [];
+  for (const id in fishCollection.caught) {
+    if (fav.includes(id)) continue;
+    delete fishCollection.caught[id];
+  }
+  fishCollection.coins += s.total;
+  saveFishCollection();
+  renderFishCollection();
+  updateFishHUD();
+  toast('💰 ' + s.n + ' ikan terjual +' + s.total + ' 🪙!');
+}
+function sellCollectionFish(id) {
+  const got = fishCollection.caught[id];
+  if (!got) return;
+  const sp = FISH.find(f => f.id === id);
+  const val = fishValue({ ...sp, size: got.best, variant: '' });
+  fishCollection.coins += val;
+  got.count--;
+  if (got.count <= 0) { delete fishCollection.caught[id]; removeFishFav(id); }
+  saveFishCollection();
+  renderFishCollection();
+  updateFishHUD();
+  toast('💰 ' + sp.name + ' terjual +' + val + ' 🪙!');
+}
+function addToAquarium(id) {
+  if (fishCollection.aquarium.length >= AQUA_MAX) { toast('🐠 Aquarium penuh (max 5)!'); return; }
+  const got = fishCollection.caught[id];
+  if (!got) return;
+  const sp = FISH.find(f => f.id === id);
+  fishCollection.aquarium.push({ id, size: got.best });
+  got.count--;
+  if (got.count <= 0) { delete fishCollection.caught[id]; removeFishFav(id); }
+  saveFishCollection();
+  renderFishCollection();
+  renderAquariumFish();
+  updateFishHUD();
+  toast('🐠 ' + sp.name + ' masuk aquarium!');
+}
+function removeFromAquarium(idx) {
+  const item = fishCollection.aquarium[idx];
+  if (!item) return;
+  fishCollection.aquarium.splice(idx, 1);
+  const got = fishCollection.caught[item.id];
+  if (got) { got.count++; got.best = Math.max(got.best, item.size); }
+  else fishCollection.caught[item.id] = { count: 1, best: item.size };
+  saveFishCollection();
+  renderFishCollection();
+  renderAquariumFish();
+  updateFishHUD();
+}
+function renderAquariumFish() {
+  for (const f of aquaFish) {
+    aquaFishGroup.remove(f.group);
+    f.group.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
+  }
+  aquaFish = [];
+  fishCollection.aquarium.forEach((item, i) => {
+    const sp = FISH.find(f => f.id === item.id);
+    if (!sp) return;
+    const f = buildFishMesh(sp.color);
+    f.group.scale.setScalar(THREE.MathUtils.clamp(item.size / 50, 0.3, 1.2));
+    aquaFishGroup.add(f.group);
+    aquaFish.push({ ...f, a: (i / Math.max(1, fishCollection.aquarium.length)) * Math.PI * 2, rx: 1.4 + (i % 3) * 0.5, rz: 0.7, y: 1.7 + (i % 3) * 0.7, speed: 0.3 + (i % 3) * 0.12 });
+  });
+}
+function renderFishRods() {
+  $('fishRodCoins').textContent = fishCollection.coins;
+  const list = $('fishRodList');
+  list.innerHTML = '';
+  for (const r of FISH_RODS) {
+    const owned = fishCollection.rods.includes(r.id);
+    const equipped = fishCollection.rod === r.id;
+    const div = document.createElement('div');
+    div.className = 'rod-card' + (equipped ? ' equipped' : '');
+    div.style.borderLeft = '4px solid ' + r.color;
+    div.innerHTML = '<div class="rod-emoji" style="background:' + r.color + '22">' + r.emoji + '</div><div class="rod-info"><div class="rod-name">' + r.name + '</div><div class="rod-stats">🍀 Luck +' + Math.round(r.luck * 100) + '% · ✨ Mutasi +' + Math.round(r.mut * 100) + '%</div><div class="rod-stats">' + r.desc + '</div></div>';
+    const btn = document.createElement('button');
+    if (equipped) { btn.textContent = '✓ Dipakai'; btn.disabled = true; }
+    else if (owned) {
+      btn.textContent = 'Pakai';
+      btn.addEventListener('click', () => { fishCollection.rod = r.id; saveFishCollection(); renderFishRods(); renderFisherRod(); toast('🎣 Memakai ' + r.name + '!'); });
+    } else {
+      btn.textContent = 'Beli 🪙' + r.price;
+      btn.disabled = fishCollection.coins < r.price;
+      btn.addEventListener('click', () => {
+        if (fishCollection.coins < r.price) return;
+        fishCollection.coins -= r.price;
+        fishCollection.rods.push(r.id);
+        fishCollection.rod = r.id;
+        saveFishCollection();
+        renderFishRods();
+        renderFisherRod();
+        updateFishHUD();
+        toast('🎉 ' + r.name + ' dibeli & dipakai!');
+      });
+    }
+    div.appendChild(btn);
+    list.appendChild(div);
+  }
+}
+function renderFishCollection() {
+  $('fishCollectionCount').textContent = '(' + fishCaughtCount() + '/' + FISH.length + ')';
+  const grid = $('fishCollectionGrid');
+  grid.innerHTML = '';
+  for (const f of FISH) {
+    const got = fishCollection.caught[f.id];
+    const rar = FISH_RARITY[f.rarity];
+    const isFav = got && (fishCollection.fav || []).includes(f.id);
+    const div = document.createElement('div');
+    div.className = 'fish-card' + (got ? '' : ' locked') + (isFav ? ' fav' : '');
+    div.innerHTML = '<div class="f-emoji">' + (got ? f.emoji : '❓') + '</div>' +
+      '<div class="f-name">' + (got ? f.name : '???') + '</div>' +
+      '<div class="f-meta" style="color:' + rar.color + '">★ ' + rar.name + '</div>' +
+      '<div class="f-meta">' + (got ? 'Terbesar: ' + got.best + ' cm<br>Dapat: ' + got.count + 'x' : 'Belum tertangkap') + '</div>' +
+      (got ? '<div class="f-actions"><button class="f-show" data-act="show" data-id="' + f.id + '">🎣 Pamer</button><button class="f-sell" data-act="sell" data-id="' + f.id + '">💰 Jual</button><button class="f-aqua" data-act="aqua" data-id="' + f.id + '">🐠 Aquarium</button><button class="f-fav' + (isFav ? ' faved' : '') + '" data-act="fav" data-id="' + f.id + '">' + (isFav ? '⭐ Favorit' : '☆ Favorit') + '</button></div>' : '');
+    grid.appendChild(div);
+  }
+  // tombol Jual Semua (favorit tidak ikut)
+  const s = sellableFish();
+  const sellBtn = $('fishSellAllBtn');
+  sellBtn.textContent = s.n > 0 ? '💰 Jual Semua (' + s.n + ' ikan · +' + s.total + ' 🪙)' : '💰 Jual Semua';
+  sellBtn.disabled = s.n === 0;
+  sellBtn.classList.remove('armed');
+  // aquarium
+  $('fishAquariumCount').textContent = '(' + fishCollection.aquarium.length + '/' + AQUA_MAX + ')';
+  const al = $('fishAquariumList');
+  al.innerHTML = '';
+  if (!fishCollection.aquarium.length) {
+    al.innerHTML = '<div class="aqua-empty">Belum ada ikan. Pindahkan ikan dari koleksimu ke sini buat pajangan!</div>';
+  }
+  fishCollection.aquarium.forEach((item, i) => {
+    const sp = FISH.find(f => f.id === item.id);
+    if (!sp) return;
+    const row = document.createElement('div');
+    row.className = 'aqua-row';
+    row.innerHTML = '<span>' + sp.emoji + '</span><div class="a-info"><b>' + sp.name + '</b><br><small>' + item.size + ' cm</small></div>';
+    const btn = document.createElement('button');
+    btn.textContent = 'Keluarkan';
+    btn.addEventListener('click', () => removeFromAquarium(i));
+    row.appendChild(btn);
+    al.appendChild(row);
+  });
+}
+function setArenaVisible(v) {
+  if (pathGroup) pathGroup.visible = v;
+  if (padGroup) padGroup.visible = v;
+  serverGroup.visible = v;
+  rangeGroup.visible = v;
+  serverHp.bg.visible = v;
+  serverHp.fg.visible = v;
+  towers.forEach(t => { t.mesh.visible = v; const hb = t.mesh.userData.hpBar; if (hb) { hb.bg.visible = v && t.hp < t.maxHp; hb.fg.visible = v && t.hp < t.maxHp; } });
+  enemies.forEach(e => { e.mesh.visible = v; const hp = e.mesh.userData.hp; if (hp) { hp.bg.visible = v; hp.fg.visible = v; } });
+  projectiles.forEach(p => { p.mesh.visible = v; });
+  floats.forEach(f => { f.sprite.visible = v; });
+}
+// char mancing bisa jalan (WASD / analog) di darat + dermaga
+function fishOnPier(x, z) {
+  return (Math.abs(x) < 1.4 && z >= 7.5 && z <= 21) || (Math.abs(z) < 1.4 && x >= 7.5 && x <= 21) ||
+         (Math.abs(z) < 1.4 && x >= -21 && x <= -7.5) || (Math.abs(x) < 1.4 && z >= -21 && z <= -7.5);
+}
+function fishWalkable(x, z) {
+  if (fishOnPier(x, z)) return true;
+  const r = Math.hypot(x, z);
+  return r >= 20.8 && r <= 30 && Math.abs(x) <= 31 && Math.abs(z) <= 21;
+}
+function fishAnyModalOpen() {
+  return ['fishGameModal', 'fishResultModal', 'fishCollectionModal', 'fishRodModal'].some(id => $(id).classList.contains('show'));
+}
+const _fishCamDir = new THREE.Vector3();
+function updateFisherman(dt, now) {
+  if (playMode !== 'fish' || fishAnyModalOpen()) return;
+  // input layar: maju = menjauhi kamera, mundur = mendekati kamera, kiri/kanan = strafe layar
+  let fwd = 0, str = 0;
+  if (fishKeys['w'] || fishKeys['arrowup']) fwd += 1;
+  if (fishKeys['s'] || fishKeys['arrowdown']) fwd -= 1;
+  if (fishKeys['a'] || fishKeys['arrowleft']) str -= 1;
+  if (fishKeys['d'] || fishKeys['arrowright']) str += 1;
+  fwd += -joyVec.y; str += joyVec.x;
+  // ubah input layar jadi arah dunia RELATIF KAMERA (habis orbit pun W tetap maju di layar)
+  camera.getWorldDirection(_fishCamDir);
+  _fishCamDir.y = 0;
+  if (_fishCamDir.lengthSq() < 0.001) _fishCamDir.set(0, 0, -1);
+  _fishCamDir.normalize();
+  const rx = -_fishCamDir.z, rz = _fishCamDir.x; // kanan kamera = forward × up
+  let mx = _fishCamDir.x * fwd + rx * str;
+  let mz = _fishCamDir.z * fwd + rz * str;
+  const len = Math.hypot(mx, mz);
+  if (len > 0.15) {
+    mx /= Math.max(1, len); mz /= Math.max(1, len);
+    const sp = 8 * dt;
+    const nx = fisherman.x + mx * sp, nz = fisherman.z + mz * sp;
+    if (fishWalkable(nx, nz)) { fisherman.x = nx; fisherman.z = nz; }
+    else if (fishWalkable(nx, fisherman.z)) fisherman.x = nx;
+    else if (fishWalkable(fisherman.x, nz)) fisherman.z = nz;
+    const targetRot = Math.atan2(mx, mz);
+    let d = targetRot - fishFisher.robot.rotation.y;
+    d = Math.atan2(Math.sin(d), Math.cos(d));
+    fishFisher.robot.rotation.y += d * Math.min(1, dt * 10);
+    fishFisher.robot.position.y = (fishOnPier(fisherman.x, fisherman.z) ? 0.46 : 0) + Math.abs(Math.sin(now / 90)) * 0.12;
+  } else {
+    const dirX = -fisherman.x, dirZ = -fisherman.z;
+    if (Math.hypot(dirX, dirZ) > 0.5) {
+      const targetRot = Math.atan2(dirX, dirZ);
+      let d = targetRot - fishFisher.robot.rotation.y;
+      d = Math.atan2(Math.sin(d), Math.cos(d));
+      fishFisher.robot.rotation.y += d * Math.min(1, dt * 5);
+    }
+    fishFisher.robot.position.y = fishOnPier(fisherman.x, fisherman.z) ? 0.46 : 0;
+  }
+  fishFisher.robot.position.x = fisherman.x;
+  fishFisher.robot.position.z = fisherman.z;
+  // kamera KUNCI MATI ke char: target persis di posisi char, kamera ikut bergeser
+  // sebesar itu juga (sudut orbit & zoom pemain tetap terjaga, pan dimatikan).
+  // Saat flight masih jalan, TUJUAN flight yang digeser mengikuti gerak char.
+  if (camAnim) {
+    const dx = fisherman.x - fishPrevPos.x, dz = fisherman.z - fishPrevPos.z;
+    camAnim.pos.x += dx; camAnim.pos.z += dz;
+    camAnim.tgt.x += dx; camAnim.tgt.z += dz;
+  } else {
+    const dx = fisherman.x - controls.target.x, dz = fisherman.z - controls.target.z;
+    camera.position.x += dx; camera.position.z += dz;
+    controls.target.x = fisherman.x; controls.target.z = fisherman.z;
+  }
+  fishPrevPos.x = fisherman.x; fishPrevPos.z = fisherman.z;
+  const spot = activeSpot(fisherman.x, fisherman.z);
+  const spotKey = spot ? spot.name : '';
+  if (spotKey !== lastSpotKey) {
+    lastSpotKey = spotKey;
+    if (fishState === 'idle') updateFishHUD();
+  }
+}
+const FISH_CAM_POS = new THREE.Vector3(0, 20, 38);
+const FISH_CAM_TGT = new THREE.Vector3(0, 0, 8.6); // persis di posisi awal char (kamera kunci ke char)
+function enterFishingMode() {
+  playMode = 'fish';
+  hideMenu();
+  $('overlay').classList.remove('show');
+  setArenaVisible(false);
+  fishGroup.visible = true;
+  document.body.classList.add('fishing');
+  document.body.classList.remove('menu-open');
+  state = 'fish';
+  setMusicMode('fish');
+  fishPrevCamMode = camMode;
+  setCamMode('rotate'); // di mode mancing drag = putar kamera (pan dimatikan supaya kamera tidak nyasar)
+  controls.enablePan = false; // kamera kunci ke char
+  renderFisherRod();
+  flyCameraTo(FISH_CAM_POS, FISH_CAM_TGT);
+  fishState = 'idle';
+  hookedFish = null;
+  fishMini = null;
+  fishBobber.visible = false;
+  fishLine.visible = false;
+  fisherman = { x: 0, z: 8.6 };
+  fishPrevPos = { x: 0, z: 8.6 };
+  fishFisher.robot.position.set(0, 0.46, 8.6);
+  fishFisher.robot.rotation.y = Math.PI;
+  clearHeldFish();
+  renderAquariumFish();
+  updateFishHUD();
+}
+function exitFishingMode() {
+  playMode = 'tower';
+  fishGroup.visible = false;
+  setArenaVisible(true);
+  document.body.classList.remove('fishing');
+  $('fishGameModal').classList.remove('show');
+  $('fishResultModal').classList.remove('show');
+  $('fishCollectionModal').classList.remove('show');
+  $('fishRodModal').classList.remove('show');
+  fishState = 'idle';
+  hookedFish = null;
+  fishMini = null;
+  clearHeldFish();
+  setCamMode(fishPrevCamMode || 'rotate');
+  controls.enablePan = true;
+  if (fishJumpAnim) { fishGroup.remove(fishJumpAnim.fish.group); fishJumpAnim = null; }
+  state = 'menu';
+  showMenu();
+}
+function updateFishing(dt, now) {
+  updateFisherman(dt, now);
+  // ikan kolam berenang melingkar + ekor mengibas
+  for (const f of pondFish) {
+    f.a += f.speed * dt;
+    f.group.position.set(Math.cos(f.a) * f.r, -0.4, Math.sin(f.a) * f.r);
+    f.group.rotation.y = Math.atan2(-Math.cos(f.a) * Math.sign(f.speed), -Math.sin(f.a) * Math.sign(f.speed));
+    f.tail.rotation.y = Math.sin(now / 120 + f.a * 5) * 0.5;
+  }
+  // riak air mengembang lalu hilang (strike)
+  for (const rp of fishRipples) {
+    if (!rp.mesh.visible) continue;
+    rp.t += dt;
+    if (rp.t < 0) continue;
+    const k = (rp.t % 1.2) / 1.2;
+    rp.mesh.scale.setScalar(0.5 + k * 3);
+    rp.mesh.material.opacity = 0.7 * (1 - k);
+    if (rp.t > 3.6) rp.mesh.visible = false;
+  }
+  // riak ambient (loop terus)
+  for (const rp of ambientRipples) {
+    rp.t += dt;
+    const k = (rp.t % 2.5) / 2.5;
+    rp.mesh.scale.setScalar(0.5 + k * 3);
+    rp.mesh.material.opacity = 0.35 * (1 - k);
+  }
+  // kunang-kunang melayang
+  if (fireflies) {
+    const pos = fireflies.geometry.attributes.position;
+    for (let i = 0; i < fireflyBase.length; i++) {
+      const b = fireflyBase[i];
+      pos.setXYZ(i,
+        b.x + Math.sin(now / 900 + b.p) * 0.8,
+        b.y + Math.sin(now / 700 + b.p * 2) * 0.4,
+        b.z + Math.cos(now / 800 + b.p) * 0.8);
+    }
+    pos.needsUpdate = true;
+    fireflies.material.opacity = 0.6 + Math.sin(now / 500) * 0.3;
+  }
+  // gelembung naik
+  for (const b of bubbles) {
+    b.position.y += dt * 0.5;
+    if (b.position.y > 0.05) b.position.y = -0.8 - Math.random() * 0.4;
+  }
+  // ikan aquarium berenang
+  for (const f of aquaFish) {
+    f.a += f.speed * dt;
+    f.group.position.set(Math.cos(f.a) * f.rx, f.y, Math.sin(f.a) * f.rz);
+    f.group.rotation.y = Math.atan2(-Math.cos(f.a), -Math.sin(f.a));
+    f.tail.rotation.y = Math.sin(now / 120 + f.a * 5) * 0.5;
+  }
+  // ikan yang dipegang di atas kepala bergoyang pelan
+  if (heldFish) {
+    heldFish.group.rotation.x = Math.sin(now / 600) * 0.15;
+    heldFish.group.rotation.z = 0.25 + Math.sin(now / 700) * 0.1;
+    heldFish.group.position.y = 3.4 + Math.sin(now / 500) * 0.08;
+    heldFish.tail.rotation.y = Math.sin(now / 120) * 0.5;
+  }
+  if (fishState === 'casting') {
+    fishCastT += dt / 0.8;
+    const t = Math.min(1, fishCastT);
+    fishBobber.position.lerpVectors(fishCastFrom, fishCastTo, t);
+    fishBobber.position.y += Math.sin(t * Math.PI) * 3;
+    if (t >= 1) {
+      fishState = 'waiting';
+      fishBiteTimer = 2 + Math.random() * 5;
+      updateFishHUD();
+    }
+  } else if (fishState === 'waiting') {
+    fishBobber.position.y = 0.1 + Math.sin(now / 400) * 0.05;
+    fishBiteTimer -= dt;
+    if (fishBiteTimer <= 0) fishStartBite();
+  } else if (fishState === 'bite') {
+    fishBobber.position.y = 0.1 - Math.abs(Math.sin(now / 90)) * 0.35;
+    fishBiteWindow -= dt;
+    if (fishBiteWindow <= 0) {
+      fishState = 'idle';
+      fishBobber.visible = false;
+      fishLine.visible = false;
+      toast('💨 Ikan pergi… terlambat menarik!');
+      updateFishHUD();
+    }
+  } else if (fishState === 'minigame' && fishMini) {
+    fishMini.needle += fishMini.dir * fishMini.speed * dt;
+    if (fishMini.needle >= 100) { fishMini.needle = 100; fishMini.dir = -1; }
+    if (fishMini.needle <= 0) { fishMini.needle = 0; fishMini.dir = 1; }
+    $('fishNeedle').style.left = 'calc(' + fishMini.needle + '% - 2px)';
+  }
+  // tali mengikuti ujung joran + pelampung
+  if (fishLine.visible) {
+    const tip = rodTipWorld();
+    const pos = fishLine.geometry.attributes.position;
+    pos.setXYZ(0, tip.x, tip.y, tip.z);
+    pos.setXYZ(1, fishBobber.position.x, fishBobber.position.y, fishBobber.position.z);
+    pos.needsUpdate = true;
+  }
+  // animasi ikan melompat saat dapat — lalu dipegang robot
+  if (fishJumpAnim) {
+    fishJumpAnim.t += dt / 1.2;
+    const t = Math.min(1, fishJumpAnim.t);
+    const f = fishJumpAnim.fish.group;
+    f.position.set(fishJumpAnim.from.x, 0.2 + Math.sin(t * Math.PI) * 3.5, fishJumpAnim.from.z + t * 2);
+    f.rotation.x = -t * Math.PI * 2;
+    f.rotation.y = t * Math.PI;
+    if (t >= 1) {
+      fishGroup.remove(f);
+      fishJumpAnim = null;
+      setHeldFish(hookedFish);
+      fishShowResult();
+    }
+  }
 }
 
 // ---------- Stages & menu ----------
@@ -1904,6 +3183,7 @@ function startStage(n, fresh, noRefund) {
   updateHUD();
   setMusicMode('battle');
   startMusic();
+  animateShopCards();
   toast('🗺️ Stage ' + n + ' — ' + LAYOUTS[n - 1].name + (!fresh && !noRefund ? ' · 💰 refund 🪙' + res.refund + ' + bonus menang 🪙' + res.bonus : ''));
 }
 function retryStage() {
@@ -2019,7 +3299,7 @@ function applyQuality() {
 function applySettings() {
   musicEnabled = settings.music;
   muted = !settings.sfx;
-  $('muteBtn').textContent = muted ? '🔇' : '🔊';
+  $('muteBtn').textContent = muted ? '🔇 Suara' : '🔊 Suara';
   $('musicBtn').textContent = musicEnabled ? '🎵' : '🔇';
   $('musicBtn').classList.toggle('off', !musicEnabled);
   if (!musicEnabled) stopMusic();
@@ -2227,7 +3507,7 @@ function victory() {
   sfxWin();
   saveBest(currentStage, score);
   $('overlayTitle').textContent = '🏆 SERVER AMAN!';
-  $('overlayText').textContent = 'Kamu berhasil menahan ' + MAX_WAVE + ' stage virus! Server selamat berkat Codero. Skor akhir: ' + score + '. Mau lanjut mode Endless? Virusnya makin banyak dan kuat!';
+  $('overlayText').textContent = 'Kamu berhasil menahan ' + MAX_WAVE + ' stage virus! Server selamat berkat pertahananmu. Skor akhir: ' + score + '. Mau lanjut mode Endless? Virusnya makin banyak dan kuat!';
   showOverlayButtons({ endless: true, retry: true, menu: true });
   $('overlay').classList.add('show');
   updateHUD();
@@ -2249,7 +3529,7 @@ const CODING_BANK = [
   { q: 'Berapa hasil dari 10 % 3 (modulo)?', options: ['1', '3', '0', '10'], answer: 0 },
   { q: 'Tag HTML untuk menampilkan gambar?', options: ['<img>', '<pic>', '<photo>', '<image>'], answer: 0 },
   { q: 'Di CSS, properti untuk ukuran huruf?', options: ['font-size', 'text-size', 'size', 'font-big'], answer: 0 },
-  { q: 'Apa hasil dari len("Codero") di Python?', options: ['6', '5', '7', 'Error'], answer: 0 },
+  { q: 'Apa hasil dari len("Server") di Python?', options: ['6', '5', '7', 'Error'], answer: 0 },
   { q: 'Di JavaScript, === artinya…', options: ['Sama persis (nilai + tipe)', 'Sama nilai saja', 'Lebih besar', 'Tidak sama'], answer: 0 },
   { q: 'Method untuk menambah elemen ke akhir array di JavaScript?', options: ['push()', 'add()', 'append()', 'insert()'], answer: 0 },
   { q: 'Keyword Python untuk mengimpor modul?', options: ['import', 'include', 'require', 'use'], answer: 0 },
@@ -2515,8 +3795,8 @@ function syncMeshes(dt) {
     } else {
       flash.material.opacity = 0;
     }
-    // bar HP menara (muncul saat rusak)
-    const damaged = t.hp < t.maxHp;
+    // bar HP menara (muncul saat rusak, hanya di mode tower)
+    const damaged = t.hp < t.maxHp && playMode === 'tower';
     u.hpBar.bg.visible = damaged;
     u.hpBar.fg.visible = damaged;
     if (damaged) setHpBar(u.hpBar, Math.max(0, t.hp / t.maxHp), X(t.x), 4.5, Z(t.y));
@@ -2527,6 +3807,8 @@ function syncMeshes(dt) {
   }
   const blink = Math.floor(gameTime * 2) % 2 === 0;
   serverLights.forEach((mat, i) => { mat.emissiveIntensity = (blink === (i % 2 === 0)) ? 2.2 : 0.6; });
+  if (portalDisc) portalDisc.material.opacity = 0.6 + Math.sin(gameTime * 2.5) * 0.15;
+  for (const h of serverHolo) h.rotation.z += dt * h.userData.spin;
   updateParticles(dt);
   updateFloats(dt);
 }
@@ -2578,6 +3860,13 @@ renderer.domElement.addEventListener('pointerup', e => {
   if (state === 'over' || state === 'win') return;
   setNDC(e);
   raycaster.setFromCamera(pointerNDC, camera);
+  if (playMode === 'fish') {
+    // PC: klik di mana saja saat STRIKE = tarik
+    if (fishState === 'bite') { fishPull(); return; }
+    const planetHits = raycaster.intersectObjects(planetHitMeshes, false);
+    if (planetHits.length > 0) { const p = planetHits[0].object.userData.planet; if (p) { interactPlanet(p); return; } }
+    return;
+  }
   const planetHits = raycaster.intersectObjects(planetHitMeshes, false);
   const towerHits = raycaster.intersectObjects(towerHitMeshes, false);
   const padHits = raycaster.intersectObjects(padHitMeshes, false);
@@ -2631,6 +3920,14 @@ renderer.domElement.addEventListener('pointermove', e => {
 const mouseClient = { x: -99, y: -99 };
 let hoveredPlanet = null;
 function updateHover() {
+  if (playMode === 'fish') {
+    // di mode mancing: kursor pointer saat STRIKE (klik di mana saja = tarik) atau di atas planet
+    raycaster.setFromCamera(pointerNDC, camera);
+    let ptr = fishState === 'bite';
+    if (!ptr && raycaster.intersectObjects(planetHitMeshes, false).length > 0) ptr = true;
+    renderer.domElement.style.cursor = ptr ? 'pointer' : '';
+    return;
+  }
   raycaster.setFromCamera(pointerNDC, camera);
   const hits = raycaster.intersectObjects(padHitMeshes, false);
   const pad = hits.length > 0 ? hits[0].object.userData.pad : null;
@@ -2698,8 +3995,74 @@ $('confirmNewYes').addEventListener('click', () => {
 });
 $('menuLoadBtn').addEventListener('click', () => showMenuView('Stages'));
 $('menuModeBtn').addEventListener('click', () => showMenuView('Modes'));
+$('menuFishBtn').addEventListener('click', enterFishingMode);
 $('menuSettingsBtn').addEventListener('click', () => showMenuView('Settings'));
 $('menuCreditsBtn').addEventListener('click', () => showMenuView('Credits'));
+// tombol mode mancing
+$('fishCastBtn').addEventListener('click', fishCast);
+$('fishPullBtn').addEventListener('click', fishPull);
+$('fishBackBtn').addEventListener('click', exitFishingMode);
+$('fishCamResetBtn').addEventListener('click', () => { camAnim = null; camera.position.copy(FISH_CAM_POS); controls.target.copy(FISH_CAM_TGT); controls.update(); });
+$('fishCollectionBtn').addEventListener('click', () => { renderFishCollection(); $('fishCollectionModal').classList.add('show'); });
+$('fishSellAllBtn').addEventListener('click', sellAllFish);
+$('fishCollectionClose').addEventListener('click', () => { $('fishCollectionModal').classList.remove('show'); updateFishHUD(); });
+$('fishResultOk').addEventListener('click', fishCloseResult);
+$('fishResultSell').addEventListener('click', fishSellResult);
+$('fishResultCollection').addEventListener('click', () => { fishCloseResult(); renderFishCollection(); $('fishCollectionModal').classList.add('show'); });
+$('fishGameModal').addEventListener('click', fishMiniClick);
+$('fishRodBtn').addEventListener('click', () => { renderFishRods(); $('fishRodModal').classList.add('show'); });
+$('fishRodClose').addEventListener('click', () => { $('fishRodModal').classList.remove('show'); updateFishHUD(); });
+$('fishCollectionGrid').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-act]');
+  if (!btn) return;
+  const id = btn.dataset.id, act = btn.dataset.act;
+  if (act === 'show') {
+    const sp = FISH.find(f => f.id === id);
+    const got = fishCollection.caught[id];
+    if (!sp || !got) return;
+    $('fishCollectionModal').classList.remove('show');
+    setHeldFish({ ...sp, size: got.best });
+    toast('✨ Kamu memamerkan ' + sp.name + ' (' + got.best + ' cm)!');
+  } else if (act === 'sell') sellCollectionFish(id);
+  else if (act === 'aqua') addToAquarium(id);
+  else if (act === 'fav') toggleFishFav(id);
+});
+// gerak char mancing: WASD / panah (PC)
+window.addEventListener('keydown', e => { fishKeys[e.key.toLowerCase()] = true; });
+window.addEventListener('keyup', e => { fishKeys[e.key.toLowerCase()] = false; });
+// analog virtual (mobile)
+{
+  const base = $('joyBase'), knob = $('joyKnob');
+  let joyId = null;
+  const setKnob = (dx, dy) => { knob.style.transform = 'translate(calc(-50% + ' + dx + 'px), calc(-50% + ' + dy + 'px))'; };
+  base.addEventListener('pointerdown', e => {
+    joyId = e.pointerId;
+    base.setPointerCapture(joyId);
+    e.preventDefault();
+  });
+  base.addEventListener('pointermove', e => {
+    if (e.pointerId !== joyId) return;
+    const rect = base.getBoundingClientRect();
+    let dx = e.clientX - (rect.left + rect.width / 2);
+    let dy = e.clientY - (rect.top + rect.height / 2);
+    const len = Math.hypot(dx, dy), max = 36;
+    if (len > max) { dx = dx / len * max; dy = dy / len * max; }
+    setKnob(dx, dy);
+    joyVec.x = dx / max; joyVec.y = dy / max;
+  });
+  const joyEnd = e => {
+    if (e.pointerId !== joyId) return;
+    joyId = null;
+    joyVec.x = 0; joyVec.y = 0;
+    setKnob(0, 0);
+  };
+  base.addEventListener('pointerup', joyEnd);
+  base.addEventListener('pointercancel', joyEnd);
+}
+// menu gerigi (game utama)
+$('gearBtn').addEventListener('click', e => { e.stopPropagation(); $('gearMenu').classList.toggle('show'); });
+document.addEventListener('click', e => { if (!$('gearMenu').contains(e.target) && e.target !== $('gearBtn')) $('gearMenu').classList.remove('show'); });
+$('gearMenu').addEventListener('click', e => { if (e.target.closest('button')) $('gearMenu').classList.remove('show'); });
 document.querySelectorAll('[data-back]').forEach(b => b.addEventListener('click', () => showMenuView('Main')));
 $('setMusicBtn').addEventListener('click', () => { settings.music = !settings.music; saveSettings(); applySettings(); refreshSettingsUI(); if (settings.music) startMusic(); });
 $('setSfxBtn').addEventListener('click', () => { settings.sfx = !settings.sfx; saveSettings(); applySettings(); refreshSettingsUI(); });
@@ -2713,7 +4076,7 @@ $('camModeBtn').addEventListener('click', () => {
 $('camResetBtn').addEventListener('click', () => { resetCamera(); toast('🎯 Kamera kembali ke tampilan awal'); });
 $('muteBtn').addEventListener('click', () => {
   muted = !muted;
-  $('muteBtn').textContent = muted ? '🔇' : '🔊';
+  $('muteBtn').textContent = muted ? '🔇 Suara' : '🔊 Suara';
 });
 $('upgradeBtn').addEventListener('click', () => {
   if (!selectedTower || selectedTower.level >= 3) return;
@@ -2776,7 +4139,7 @@ function reset() {
   spawnQueue = []; spawnTimer = 0; spawnInterval = 0.85;
   selectedBuild = null; selectedTower = null; hoveredPad = null;
   dragType = null; dragStart = null; dragging = false;
-  dragGhost.classList.remove('show');
+  hideGhostRobot();
   $('overlay').classList.remove('show');
   $('quizModal').classList.remove('show');
   currentQuiz = null;
@@ -2810,7 +4173,7 @@ function loop(now) {
   requestAnimationFrame(loop);
   let dt = Math.min(0.05, (now - lastT) / 1000);
   lastT = now;
-  if (!paused && state !== 'over' && state !== 'win' && state !== 'menu' && state !== 'clear') {
+  if (!paused && state !== 'over' && state !== 'win' && state !== 'menu' && state !== 'clear' && state !== 'fish') {
     update(dt * speed);
   } else {
     gameTime += dt * 0; // keep gameTime frozen when paused
@@ -2818,14 +4181,23 @@ function loop(now) {
   syncMeshes(dt);
   updateSky(dt);
   updateHover();
+  if (playMode === 'fish') updateFishing(dt, now);
+  if (ghostRobot) {
+    ghostRobot.robot.position.y = 0.35 + Math.sin(now / 300) * 0.25; // melayang naik-turun
+    ghostRobot.robot.rotation.y += dt * 1.6; // berputar pelan
+  }
   if (selectedTower) positionTowerPopup();
   if (camAnim) {
-    const k = 1 - Math.exp(-dt * 3.2);
+    const k = 1 - Math.exp(-dt * 2.0);
     camera.position.lerp(camAnim.pos, k);
     controls.target.lerp(camAnim.tgt, k);
-    if (camera.position.distanceTo(camAnim.pos) < 0.05) camAnim = null;
+    if (camera.position.distanceTo(camAnim.pos) < 0.05 || now - camAnim.t0 > 8000) {
+      camera.position.copy(camAnim.pos);
+      controls.target.copy(camAnim.tgt);
+      camAnim = null;
+    }
   }
-  if (state !== 'menu' && !camAnim) {
+  if (state !== 'menu' && !camAnim && playMode !== 'fish') {
     controls.target.x = THREE.MathUtils.clamp(controls.target.x, -20, 20);
     controls.target.z = THREE.MathUtils.clamp(controls.target.z, -12, 12);
     controls.target.y = 0;
@@ -2905,6 +4277,42 @@ window.__codero3d = {
   getEnemies: () => enemies.map(e => ({ type: e.type, hp: Math.round(e.hp), x: Math.round(e.x), y: Math.round(e.y) })),
   showQuiz,
   getQuiz: () => currentQuiz,
+  fish: {
+    enter: () => enterFishingMode(),
+    exit: () => exitFishingMode(),
+    state: () => ({ playMode, fishState, caught: fishCaughtCount(), total: fishCollection.total }),
+    cast: () => fishCast(),
+    forceBite: () => { if (fishState === 'waiting' || fishState === 'casting') { fishState = 'waiting'; fishBobber.visible = true; fishBobber.position.copy(fishCastTo); fishStartBite(); } },
+    pull: () => fishPull(),
+    mini: () => fishMini ? { needle: +fishMini.needle.toFixed(1), zoneStart: +fishMini.zoneStart.toFixed(3), zoneW: +fishMini.zoneW.toFixed(3), round: fishMini.round, rounds: fishMini.rounds } : null,
+    setNeedle: (x) => { if (fishMini) fishMini.needle = x; },
+    clickMini: () => fishMiniClick(),
+    hooked: () => hookedFish ? { name: hookedFish.name, rarity: hookedFish.rarity, size: hookedFish.size } : null,
+    collection: () => JSON.parse(JSON.stringify(fishCollection)),
+    roll: () => rollFish(),
+    bobber: () => fishBobber.visible ? { x: +fishBobber.position.x.toFixed(2), y: +fishBobber.position.y.toFixed(2), z: +fishBobber.position.z.toFixed(2) } : null,
+    held: () => heldFish ? { name: heldFish.info.name, size: heldFish.info.size } : null,
+    fisherman: () => ({ x: +fisherman.x.toFixed(2), z: +fisherman.z.toFixed(2) }),
+    setFisherman: (x, z) => { fisherman.x = x; fisherman.z = z; },
+    setKeys: (k) => { fishKeys = { ...k }; },
+    setJoy: (x, y) => { joyVec.x = x; joyVec.y = y; },
+    spot: () => { const s = activeSpot(fisherman.x, fisherman.z); return s ? s.name : null; },
+    coins: () => fishCollection.coins,
+    setCoins: (n) => { fishCollection.coins = n; saveFishCollection(); updateFishHUD(); },
+    rods: () => ({ owned: [...fishCollection.rods], equipped: fishCollection.rod }),
+    buyRod: (id) => { const r = FISH_RODS.find(x => x.id === id); if (r && !fishCollection.rods.includes(id) && fishCollection.coins >= r.price) { fishCollection.coins -= r.price; fishCollection.rods.push(id); fishCollection.rod = id; saveFishCollection(); renderFisherRod(); updateFishHUD(); return true; } return false; },
+    rod: () => currentRod().id,
+    sell: (id) => sellCollectionFish(id),
+    fav: (id) => toggleFishFav(id),
+    favs: () => [...(fishCollection.fav || [])],
+    sellAll: () => sellAllFish(),
+    sellArmed: () => sellAllArmed,
+    addAqua: (id) => addToAquarium(id),
+    aquarium: () => fishCollection.aquarium.map(a => a.id),
+    aquaCount: () => aquaFish.length,
+    value: (id, size) => { const sp = FISH.find(f => f.id === id); return sp ? fishValue({ ...sp, size, variant: '' }) : 0 }
+  },
+  ghostState: () => ghostRobot ? { x: +ghostRobot.robot.position.x.toFixed(2), y: +ghostRobot.robot.position.y.toFixed(2), z: +ghostRobot.robot.position.z.toFixed(2), rotY: +ghostRobot.robot.rotation.y.toFixed(2) } : null,
   getQuizMode: () => quizMode,
   getStrikes: () => retryStrikes,
   forceGameOver: () => gameOver(),
