@@ -451,7 +451,7 @@
     <!-- KREDIT -->
     <div class="menu-view" id="menuCredits" style="display:none">
       <h2>🏆 Kredit</h2>
-      <p class="credits"><b>Jaga Server 3D</b><br>Game tower defense & mancing 3D.<br><br>Dibuat oleh <b>Nvy</b><br>Dibantu Elaina (Ai Asisstant )<br><br>Portfolio:<a href="https://nvy.my.id" target="_blank" rel="noopener">nvy.my.id</a><br>Dibangun dengan Three.js.<br>© 2026 Nvy</p>
+      <p class="credits"><b>Jaga Server 3D</b><br>Game tower defense & mancing 3D.<br><br>Dibuat oleh <b>Nvy</b><br>Dibantu Elaina ( Ai Assistant )<br><br>Portfolio:<a href="https://nvy.my.id" target="_blank" rel="noopener">nvy.my.id</a><br>Dibangun dengan Three.js.<br>© 2026 Nvy</p>
       <button class="menu-back" data-back>← Kembali</button>
     </div>
   </div>
@@ -2216,12 +2216,12 @@ const FISH_SPOTS = [
 let fishCollection = { caught: {}, total: 0, coins: 0, rods: ['bambu'], rod: 'bambu', aquarium: [], fav: [] };
 function loadFishCollection() {
   try {
-    const raw = localStorage.getItem('codero3d-fish');
+    const raw = localStorage.getItem('jagaserver3d-fish');
     if (raw) fishCollection = { caught: {}, total: 0, coins: 0, rods: ['bambu'], rod: 'bambu', aquarium: [], fav: [], ...JSON.parse(raw) };
   } catch (_) {}
 }
 function saveFishCollection() {
-  try { localStorage.setItem('codero3d-fish', JSON.stringify(fishCollection)); } catch (_) {}
+  try { localStorage.setItem('jagaserver3d-fish', JSON.stringify(fishCollection)); } catch (_) {}
 }
 function fishCaughtCount() { return Object.keys(fishCollection.caught).length; }
 function currentRod() { return FISH_RODS.find(r => r.id === fishCollection.rod) || FISH_RODS[0]; }
@@ -2538,6 +2538,18 @@ function buildFishingScene() {
   fishGroup.add(aquaFishGroup);
 }
 buildFishingScene();
+// Migrasi satu kali: save lama yang masih tersimpan dengan kunci 'codero3d*'
+// dipindah ke kunci baru 'jagaserver3d*', lalu kunci lama dihapus. Setelah
+// pemindahan ini tidak ada lagi data 'codero' yang tersisa di browser.
+(function migrateLegacySaves() {
+  try {
+    const pairs = [['codero3d', 'jagaserver3d'], ['codero3d-settings', 'jagaserver3d-settings'], ['codero3d-fish', 'jagaserver3d-fish']];
+    for (const [oldK, newK] of pairs) {
+      const v = localStorage.getItem(oldK);
+      if (v !== null) { if (localStorage.getItem(newK) === null) localStorage.setItem(newK, v); localStorage.removeItem(oldK); }
+    }
+  } catch (_) {}
+})();
 loadFishCollection();
 
 // ---------- Logika mancing ----------
@@ -3157,18 +3169,18 @@ function updateFishing(dt, now) {
 // ---------- Stages & menu ----------
 function loadProgress() {
   try {
-    const raw = localStorage.getItem('codero3d');
+    const raw = localStorage.getItem('jagaserver3d');
     if (raw) { const p = JSON.parse(raw); unlockedStage = Math.min(MAX_WAVE, Math.max(1, p.unlocked || 1)); bestScores = p.best || {}; if (p.mode && MODES[p.mode]) gameMode = p.mode; }
   } catch (_) {}
 }
 function saveProgress() {
-  try { localStorage.setItem('codero3d', JSON.stringify({ unlocked: unlockedStage, best: bestScores, mode: gameMode })); } catch (_) {}
+  try { localStorage.setItem('jagaserver3d', JSON.stringify({ unlocked: unlockedStage, best: bestScores, mode: gameMode })); } catch (_) {}
 }
 // ---------- Kode backup (pindah progres antar device) ----------
 // v2 (JS3D2-): format ringkas custom — angka base36, bitmask, dipisah '~' /, / ; / :
 //   tower: unlocked,modeIdx,best(stage=score;...) ~ fish: coins,total,caught(idx:count:best10;...),rodMask,rodIdx,aqua(idx:size10;...),favMask ~ settingsBits
 //   tipikal ~40-60 karakter (v1 JSON base64 bisa 400+). v1 (JS3D-) tetap bisa diimport.
-const SAVE_KEYS = ['codero3d', 'codero3d-settings', 'codero3d-fish'];
+const SAVE_KEYS = ['jagaserver3d', 'jagaserver3d-settings', 'jagaserver3d-fish'];
 const MODE_IDS = ['santai', 'normal', 'sulit'];
 const b36 = n => Math.max(0, Math.round(n)).toString(36);
 const fromB36 = s => parseInt(s, 36) || 0;
@@ -3215,7 +3227,7 @@ function importSaveCode(code, opts) {
         const kv = e.split('=');
         if (kv.length === 2) { const st = fromB36(kv[0]); if (st >= 1 && st <= MAX_WAVE) best[st] = fromB36(kv[1]); }
       }
-      localStorage.setItem('codero3d', JSON.stringify({ unlocked, best, mode }));
+      localStorage.setItem('jagaserver3d', JSON.stringify({ unlocked, best, mode }));
       const f = parts[1].split(',');
       if (f.length !== 7) return false;
       const caught = {};
@@ -3236,19 +3248,20 @@ function importSaveCode(code, opts) {
       const favMask = fromB36(f[6]);
       const fav = [];
       FISH.forEach((sp, i) => { if (favMask & (1 << i)) fav.push(sp.id); });
-      localStorage.setItem('codero3d-fish', JSON.stringify({ caught, total: fromB36(f[1]), coins: fromB36(f[0]), rods, rod, aquarium, fav }));
+      localStorage.setItem('jagaserver3d-fish', JSON.stringify({ caught, total: fromB36(f[1]), coins: fromB36(f[0]), rods, rod, aquarium, fav }));
       const sb = fromB36(parts[2]);
-      localStorage.setItem('codero3d-settings', JSON.stringify({ music: !!(sb & 1), sfx: !!(sb & 2), quality: (sb & 4) ? 'high' : 'low', cam: (sb & 8) ? 'pan' : 'rotate' }));
+      localStorage.setItem('jagaserver3d-settings', JSON.stringify({ music: !!(sb & 1), sfx: !!(sb & 2), quality: (sb & 4) ? 'high' : 'low', cam: (sb & 8) ? 'pan' : 'rotate' }));
       if (reload) setTimeout(() => location.reload(), 900);
       return true;
     }
     if (raw.startsWith('JS3D-')) {
-      // v1: JSON base64 (kompatibel mundur)
+      // v1: JSON base64 (kompatibel mundur; kunci lama dipetakan ke kunci baru)
       const data = JSON.parse(decodeURIComponent(escape(atob(raw.slice(5)))));
       if (!data || typeof data !== 'object' || data.v !== 1) return false;
       let wrote = false;
-      for (const k of SAVE_KEYS) {
-        if (data[k] && typeof data[k] === 'object') { localStorage.setItem(k, JSON.stringify(data[k])); wrote = true; }
+      const LEGACY_KEYS = { 'codero3d': 'jagaserver3d', 'codero3d-settings': 'jagaserver3d-settings', 'codero3d-fish': 'jagaserver3d-fish' };
+      for (const [oldK, newK] of Object.entries(LEGACY_KEYS)) {
+        if (data[oldK] && typeof data[oldK] === 'object') { localStorage.setItem(newK, JSON.stringify(data[oldK])); wrote = true; }
       }
       if (!wrote) return false;
       if (reload) setTimeout(() => location.reload(), 900);
@@ -3390,12 +3403,12 @@ function renderModeList() {
 let settings = { music: true, sfx: true, quality: 'high', cam: 'rotate' };
 function loadSettings() {
   try {
-    const raw = localStorage.getItem('codero3d-settings');
+    const raw = localStorage.getItem('jagaserver3d-settings');
     if (raw) Object.assign(settings, JSON.parse(raw));
   } catch (_) {}
 }
 function saveSettings() {
-  try { localStorage.setItem('codero3d-settings', JSON.stringify(settings)); } catch (_) {}
+  try { localStorage.setItem('jagaserver3d-settings', JSON.stringify(settings)); } catch (_) {}
 }
 function applyQuality() {
   const high = settings.quality === 'high';
@@ -4096,7 +4109,7 @@ $('menuContinueBtn').addEventListener('click', () => { if (runStarted) hideMenu(
 $('menuNewBtn').addEventListener('click', () => { $('newGameConfirm').style.display = 'block'; });
 $('confirmNewNo').addEventListener('click', () => { $('newGameConfirm').style.display = 'none'; });
 $('confirmNewYes').addEventListener('click', () => {
-  try { localStorage.removeItem('codero3d'); } catch (_) {}
+  try { localStorage.removeItem('jagaserver3d'); } catch (_) {}
   unlockedStage = 1; bestScores = {};
   $('newGameConfirm').style.display = 'none';
   startStage(1, true);
@@ -4354,7 +4367,7 @@ $('loading').style.display = 'none';
 requestAnimationFrame(loop);
 
 // test hook (dipakai Playwright untuk verifikasi; tidak memengaruhi gameplay)
-window.__codero3d = {
+window.__jagaserver3d = {
   ready: true,
   getState: () => ({ coins, lives, score, wave, state, towers: towers.length, enemies: enemies.length }),
   getLayout: () => ({ stage: currentStage, path: PATH.map(p => ({ x: p.x, y: p.y })), pads: PADS.map(p => ({ x: p.x, y: p.y })) }),
